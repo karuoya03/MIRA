@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard – Mira</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+/* (your existing CSS – unchanged – keep as is) */
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --g-dark:#1f3e1b; --g-main:#2d5a27; --g-mid:#4a8c3a;
+  --g-light:#e8f5e9; --g-pale:#f0f9f0; --g-xpale:#f8fdf7;
+  --white:#fff; --border:#d4e8d0;
+  --text:#1a2e18; --muted:#4a5a47; --subtle:#7a9178;
+  --r:12px; --rs:8px;
+  --sidebar:260px;
+}
+html,body{height:100%;}
+body{
+  font-family:'Segoe UI',system-ui,sans-serif;
+  background:var(--g-xpale);color:var(--text);
+  display:flex;flex-direction:column;
+  animation:pageIn .3s ease both;
+}
+@keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.topbar{height:62px;background:var(--g-dark);color:#fff;
+  display:flex;align-items:center;padding:0 24px;gap:16px;
+  position:sticky;top:0;z-index:800;box-shadow:0 2px 12px rgba(0,0,0,.3);flex-shrink:0;}
+.topbar-logo{display:flex;align-items:center;gap:9px;font-size:1.45rem;font-weight:800;}
+.topbar-logo i{color:#8bc34a;font-size:1.5rem;}
+.topbar-spacer{flex:1;}
+.topbar-user{font-size:.85rem;color:#c8e6c9;display:flex;align-items:center;gap:7px;}
+.topbar-user i{color:#8bc34a;}
+.tbtn{padding:7px 15px;border-radius:var(--rs);font-size:.82rem;font-weight:700;
+  cursor:pointer;border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);
+  color:#fff;transition:background .18s;display:flex;align-items:center;gap:6px;}
+.tbtn:hover{background:rgba(255,255,255,.2);}
+
+.layout{display:flex;flex:1;min-height:0;overflow:hidden;}
+
+.sidebar{width:var(--sidebar);background:var(--white);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;padding:18px 0 16px;}
+.sb-section{font-size:.68rem;font-weight:800;color:var(--subtle);
+  letter-spacing:.09em;text-transform:uppercase;padding:14px 20px 6px;}
+.nav-btn{display:flex;align-items:center;gap:11px;padding:11px 20px;
+  cursor:pointer;color:var(--muted);font-size:.88rem;font-weight:500;
+  border-left:3px solid transparent;transition:all .15s;
+  background:none;border-top:none;border-right:none;border-bottom:none;
+  width:100%;text-align:left;font-family:inherit;}
+.nav-btn i{width:17px;text-align:center;color:var(--subtle);font-size:.9rem;}
+.nav-btn:hover{background:var(--g-pale);color:var(--g-main);}
+.nav-btn:hover i{color:var(--g-mid);}
+.nav-btn.active{background:var(--g-light);color:var(--g-main);
+  border-left-color:var(--g-main);font-weight:700;}
+.nav-btn.active i{color:var(--g-main);}
+.sb-spacer{flex:1;}
+.sb-logout{margin:10px 14px 0;padding:11px;border-radius:var(--rs);
+  background:var(--g-light);border:none;color:var(--g-main);
+  cursor:pointer;font-size:.88rem;font-weight:700;width:calc(100% - 28px);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:all .18s;font-family:inherit;}
+.sb-logout:hover{background:var(--g-main);color:var(--white);}
+
+.main{flex:1;overflow-y:auto;padding:28px 30px;}
+
+.page-hdr{margin-bottom:24px;}
+.page-title{font-size:1.55rem;font-weight:800;color:var(--g-dark);letter-spacing:-.01em;}
+.page-sub{font-size:.875rem;color:var(--subtle);margin-top:3px;}
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+.stat-card{background:var(--white);border:1px solid var(--border);
+  border-radius:var(--r);padding:18px 20px;display:flex;align-items:center;gap:14px;}
+.stat-ico{width:46px;height:46px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:1.15rem;}
+.ico-green{background:var(--g-light);color:var(--g-main);}
+.ico-blue{background:#e3f2fd;color:#1565c0;}
+.ico-amber{background:#fff8e1;color:#e65100;}
+.ico-red{background:#ffebee;color:#c62828;}
+.stat-lbl{font-size:.72rem;color:var(--subtle);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+.stat-val{font-size:1.65rem;font-weight:800;color:var(--text);line-height:1.1;}
+
+.s-card{background:var(--white);border:1px solid var(--border);
+  border-radius:var(--r);margin-bottom:24px;overflow:hidden;}
+.s-card-hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid var(--border);background:var(--g-pale);}
+.s-card-title{font-size:.95rem;font-weight:800;color:var(--g-dark);
+  display:flex;align-items:center;gap:9px;}
+.s-card-title i{color:var(--g-mid);}
+.s-card-body{padding:20px;}
+
+.med-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+.med-card{border:1px solid var(--border);border-radius:var(--r);
+  overflow:hidden;transition:box-shadow .2s,transform .2s;}
+.med-card:hover{box-shadow:0 6px 22px rgba(45,90,39,.13);transform:translateY(-2px);}
+.med-card-hdr{background:var(--g-main);padding:14px 16px;
+  display:flex;align-items:center;gap:8px;}
+.med-card-name{color:#fff;font-weight:800;font-size:1rem;flex:1;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ico-act{background:rgba(255,255,255,.18);border:none;color:#fff;
+  width:30px;height:30px;border-radius:6px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:.82rem;
+  transition:background .15s;flex-shrink:0;}
+.ico-act:hover{background:rgba(255,255,255,.34);}
+.ico-act.del:hover{background:rgba(220,50,50,.65);}
+.med-card-body{padding:14px 16px;background:var(--g-pale);}
+.med-row{display:flex;justify-content:space-between;align-items:flex-start;
+  padding:5px 0;font-size:.83rem;border-bottom:1px solid var(--border);}
+.med-row:last-child{border-bottom:none;padding-bottom:0;}
+.med-lbl{color:var(--subtle);font-weight:600;flex-shrink:0;}
+.med-val{color:var(--text);text-align:right;flex:1;margin-left:8px;word-break:break-word;}
+.badge{display:inline-flex;align-items:center;gap:4px;
+  padding:2px 9px;border-radius:20px;font-size:.73rem;font-weight:700;}
+.badge-active{background:var(--g-light);color:var(--g-main);}
+.badge-next{background:#fff3e0;color:#e65100;}
+
+.empty-state{text-align:center;padding:42px 20px;color:var(--subtle);}
+.empty-state i{font-size:3rem;color:var(--border);margin-bottom:12px;}
+.empty-state p{font-size:.875rem;margin-top:4px;}
+
+.btn{display:inline-flex;align-items:center;gap:7px;
+  padding:9px 18px;border-radius:var(--rs);font-size:.875rem;
+  font-weight:700;cursor:pointer;border:none;transition:all .18s;font-family:inherit;}
+.btn-primary{background:var(--g-main);color:var(--white);}
+.btn-primary:hover{background:var(--g-dark);transform:translateY(-1px);}
+.btn-secondary{background:var(--white);color:var(--g-main);border:1.5px solid var(--g-main);}
+.btn-secondary:hover{background:var(--g-light);}
+.btn-danger{background:#ffebee;color:#c62828;border:1.5px solid #f9a8a8;}
+.btn-danger:hover{background:#c62828;color:var(--white);}
+.btn-sm{padding:7px 13px;font-size:.8rem;}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important;}
+
+.h-table{width:100%;border-collapse:collapse;font-size:.85rem;}
+.h-table th{text-align:left;padding:9px 14px;background:var(--g-pale);
+  color:var(--subtle);font-size:.72rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.05em;border-bottom:1px solid var(--border);}
+.h-table td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text);}
+.h-table tr:last-child td{border-bottom:none;}
+.h-table tr:hover td{background:var(--g-pale);}
+.st-taken{color:var(--g-main);font-weight:700;}
+.st-missed{color:#c62828;font-weight:700;}
+
+.track-item{border:1px solid var(--border);border-radius:var(--rs);
+  overflow:hidden;margin-bottom:12px;}
+.track-item-hdr{background:var(--g-pale);padding:12px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.track-name{font-weight:800;color:var(--g-dark);}
+.track-sub{font-size:.8rem;color:var(--subtle);margin-top:2px;}
+.track-item-body{padding:10px 16px;font-size:.83rem;color:var(--muted);}
+.track-btns{display:flex;gap:8px;}
+
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);
+  z-index:1000;align-items:center;justify-content:center;padding:20px;}
+.overlay.open{display:flex;animation:ovIn .2s ease;}
+@keyframes ovIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--white);border-radius:var(--r);
+  width:100%;max-width:560px;max-height:90vh;overflow-y:auto;
+  box-shadow:0 20px 60px rgba(0,0,0,.2);animation:mdIn .25s ease;}
+@keyframes mdIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:18px 22px;border-bottom:1px solid var(--border);
+  position:sticky;top:0;background:var(--white);z-index:2;}
+.modal-title{font-size:1.05rem;font-weight:800;color:var(--g-dark);
+  display:flex;align-items:center;gap:9px;}
+.modal-title i{color:var(--g-mid);}
+.close-x{background:none;border:none;color:var(--subtle);font-size:1.15rem;
+  cursor:pointer;width:30px;height:30px;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.close-x:hover{background:var(--g-light);color:var(--g-main);}
+.modal-body{padding:22px;}
+.modal-ftr{padding:16px 22px;border-top:1px solid var(--border);
+  display:flex;justify-content:flex-end;gap:10px;
+  position:sticky;bottom:0;background:var(--white);}
+
+.fg{margin-bottom:16px;}
+.flbl{display:block;margin-bottom:5px;font-size:.78rem;font-weight:700;
+  color:var(--g-dark);text-transform:uppercase;letter-spacing:.04em;}
+.flbl .req{color:#c62828;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fi,.fsel,.fta{width:100%;padding:10px 12px;border:1.5px solid var(--border);
+  border-radius:var(--rs);font-size:.9rem;background:var(--white);
+  color:var(--text);transition:border-color .18s,box-shadow .18s;font-family:inherit;}
+.fi:focus,.fsel:focus,.fta:focus{outline:none;border-color:var(--g-main);
+  box-shadow:0 0 0 3px rgba(45,90,39,.12);}
+.fta{resize:vertical;min-height:76px;}
+
+.time-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+.time-row{display:flex;align-items:center;gap:8px;}
+.time-row .fi{flex:1;}
+.rm-time{background:#ffebee;border:none;color:#c62828;
+  width:34px;height:34px;border-radius:var(--rs);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:all .15s;font-size:.85rem;}
+.rm-time:hover{background:#c62828;color:var(--white);}
+.add-time-btn{background:var(--g-light);border:1.5px dashed var(--g-mid);
+  color:var(--g-main);padding:8px;border-radius:var(--rs);cursor:pointer;
+  font-size:.8rem;font-weight:700;display:flex;align-items:center;
+  justify-content:center;gap:6px;width:100%;transition:all .15s;font-family:inherit;}
+.add-time-btn:hover{background:var(--g-main);color:var(--white);border-style:solid;}
+
+.confirm-modal{max-width:380px;}
+.confirm-msg{font-size:.95rem;color:var(--muted);line-height:1.5;}
+.confirm-note{font-size:.8rem;color:var(--subtle);margin-top:6px;}
+
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:9999;
+  display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.toast{padding:11px 17px;border-radius:var(--rs);font-size:.875rem;font-weight:700;
+  min-width:220px;max-width:340px;box-shadow:0 4px 18px rgba(0,0,0,.18);
+  display:flex;align-items:center;gap:9px;
+  animation:tIn .22s ease both;pointer-events:auto;}
+@keyframes tIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+.toast.success{background:var(--g-main);color:#fff;}
+.toast.error{background:#c62828;color:#fff;}
+.toast.info{background:#1565c0;color:#fff;}
+
+.hidden{display:none!important;}
+
+@media(max-width:1100px){.stats-row{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:900px){
+  .layout{flex-direction:column;}
+  .sidebar{width:100%;flex-direction:row;flex-wrap:wrap;padding:8px;
+    border-right:none;border-bottom:1px solid var(--border);height:auto;}
+  .sb-section,.sb-spacer{display:none;}
+  .nav-btn{border-radius:var(--rs);border:none;border-left:none;
+    padding:8px 12px;font-size:.78rem;flex:none;}
+  .sb-logout{margin:0;width:auto;flex:none;}
+  .main{padding:18px;}
+}
+@media(max-width:600px){
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .med-grid{grid-template-columns:1fr;}
+  .g2{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-logo"><i class="fas fa-pills"></i>Mira</div>
+  <div class="topbar-spacer"></div>
+  <div class="topbar-user"><i class="fas fa-user-circle"></i><span id="tbUser"></span></div>
+  <button class="tbtn" onclick="go('profile.html')"><i class="fas fa-user-cog"></i> Profile</button>
+  <button class="tbtn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sb-section">Medications</div>
+    <button class="nav-btn" id="nb-overview" onclick="showView('overview')"><i class="fas fa-th-large"></i> Overview</button>
+    <button class="nav-btn" id="nb-add" onclick="openAddModal()"><i class="fas fa-plus-circle"></i> Add Medication</button>
+    <button class="nav-btn" id="nb-track" onclick="showView('track')"><i class="fas fa-check-circle"></i> Log Intake</button>
+    <button class="nav-btn" id="nb-history" onclick="showView('history')"><i class="fas fa-history"></i> Dose History</button>
+    <button class="nav-btn" onclick="startTour()"><i class="fas fa-compass"></i> Guided Tour</button>
+    <button class="nav-btn" onclick="openSupportModal()"><i class="fas fa-headset"></i> Customer Support</button>
+    <div class="sb-section">Account</div>
+    <button class="nav-btn" onclick="go('profile.html')"><i class="fas fa-user-cog"></i> Profile Settings</button>
+    <div class="sb-spacer"></div>
+    <button class="sb-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+  </aside>
+
+  <main class="main">
+    <div id="view-overview">
+      <div class="page-hdr"><div class="page-title" id="greetTitle">Your Dashboard</div><div class="page-sub" id="greetDate"></div></div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-ico ico-green"><i class="fas fa-capsules"></i></div><div><div class="stat-lbl">Active Medications</div><div class="stat-val" id="stTotal">0</div></div></div>
+        <div class="stat-card"><div class="stat-ico ico-blue"><i class="fas fa-calendar-day"></i></div><div><div class="stat-lbl">Doses Today</div><div class="stat-val" id="stToday">0</div></div></div>
+        <div class="stat-card"><div class="stat-ico ico-amber"><i class="fas fa-check"></i></div><div><div class="stat-lbl">Taken Today</div><div class="stat-val" id="stTaken">0</div></div></div>
+        <div class="stat-card"><div class="stat-ico ico-red"><i class="fas fa-times"></i></div><div><div class="stat-lbl">Missed Today</div><div class="stat-val" id="stMissed">0</div></div></div>
+      </div>
+      <div class="s-card"><div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-pills"></i> My Medications</div><button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fas fa-plus"></i> Add New</button></div><div class="s-card-body"><div class="med-grid" id="medGrid"></div><div class="empty-state hidden" id="noMeds"><i class="fas fa-prescription-bottle"></i><h3 style="font-size:1rem;margin-top:8px;color:var(--g-dark)">No medications yet</h3><p>Click <strong>Add New</strong> to set up your first medication reminder.</p></div></div></div>
+    </div>
+    <div id="view-track" class="hidden"><div class="page-hdr"><div class="page-title">Log Today's Intake</div><div class="page-sub">Mark each medication dose as taken or missed.</div></div><div class="s-card"><div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-check-circle"></i> Today's Schedule</div></div><div class="s-card-body" id="trackBody"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading…</p></div></div></div></div>
+    <div id="view-history" class="hidden"><div class="page-hdr"><div class="page-title">Dose History</div><div class="page-sub">Your last 100 recorded doses.</div></div><div class="s-card"><div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-history"></i> Dose Log</div></div><div class="s-card-body" style="padding:0"><table class="h-table" id="histTable"><thead><tr><th>Medication</th><th>Dosage</th><th>Date</th><th>Time</th><th>Status</th></tr></thead><tbody id="histBody"></tbody></table><div class="empty-state hidden" id="histEmpty"><i class="fas fa-history"></i><p>No history recorded yet.</p></div></div></div></div>
+
+  </main>
+</div>
+
+<div class="overlay" id="medOverlay"><div class="modal"><div class="modal-hdr"><div class="modal-title" id="medModalLabel"><i class="fas fa-pills"></i> Add Medication</div><button class="close-x" onclick="closeMedModal()"><i class="fas fa-times"></i></button></div><form id="medForm" onsubmit="saveMedication(event)"><div class="modal-body"><input type="hidden" id="editId"><div class="fg"><label class="flbl">Medication Name <span class="req">*</span></label><input type="text" class="fi" id="fName" placeholder="e.g. Metformin 500mg" required></div><div class="g2"><div class="fg"><label class="flbl">Dosage <span class="req">*</span></label><input type="text" class="fi" id="fDosage" placeholder="e.g. 500mg" required></div><div class="fg"><label class="flbl">Frequency <span class="req">*</span></label><select class="fsel" id="fFreq" required><option value="">Select…</option><option>Once daily</option><option>Twice daily</option><option>Three times daily</option><option>Four times daily</option><option>As needed</option></select></div></div><div class="fg"><label class="flbl">Reminder Times <span class="req">*</span><span style="color:var(--subtle);font-weight:500;text-transform:none;letter-spacing:0"> — you can edit existing times here</span></label><div class="time-list" id="timeList"></div><button type="button" class="add-time-btn" onclick="addTime()"><i class="fas fa-plus"></i> Add Another Time</button></div><div class="g2"><div class="fg"><label class="flbl">Start Date <span class="req">*</span></label><input type="date" class="fi" id="fStart" required></div><div class="fg"><label class="flbl">End Date</label><input type="date" class="fi" id="fEnd"></div></div><div class="fg"><label class="flbl">Notes</label><textarea class="fta" id="fNotes" placeholder="e.g. Take with food, avoid alcohol…"></textarea></div></div><div class="modal-ftr"><button type="button" class="btn btn-secondary" onclick="closeMedModal()">Cancel</button><button type="submit" class="btn btn-primary" id="medSaveBtn"><i class="fas fa-save"></i> Save Medication</button></div></form></div></div>
+
+<div class="overlay" id="confirmOverlay"><div class="modal confirm-modal"><div class="modal-hdr"><div class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Delete</div><button class="close-x" onclick="closeConfirm()"><i class="fas fa-times"></i></button></div><div class="modal-body"><p class="confirm-msg" id="confirmMsg">Remove this medication?</p><p class="confirm-note">All future reminders for this medication will also be removed. This cannot be undone.</p></div><div class="modal-ftr"><button class="btn btn-secondary" onclick="closeConfirm()">Cancel</button><button class="btn btn-danger" id="confirmOk"><i class="fas fa-trash"></i> Yes, Delete</button></div></div></div>
+
+<div class="overlay" id="supportOverlay"><div class="modal" style="max-width:500px;"><div class="modal-hdr"><div class="modal-title"><i class="fas fa-headset"></i> Raise a Support Ticket</div><button class="close-x" onclick="closeSupportModal()"><i class="fas fa-times"></i></button></div><form id="supportForm" onsubmit="submitTicket(event)"><div class="modal-body"><div class="fg"><label class="flbl">Subject <span class="req">*</span></label><input type="text" class="fi" id="ticketSubject" required placeholder="Brief issue summary"></div><div class="fg"><label class="flbl">Priority</label><select class="fsel" id="ticketPriority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div><div class="fg"><label class="flbl">Message <span class="req">*</span></label><textarea class="fta" id="ticketMessage" rows="4" required placeholder="Describe your issue in detail..."></textarea></div></div><div class="modal-ftr"><button type="button" class="btn btn-secondary" onclick="closeSupportModal()">Cancel</button><button type="submit" class="btn btn-primary">Submit Ticket</button></div></form></div></div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+let USER = null, MEDS = [], HIST = [], EDIT_ID = null, pendingDeleteId = null;
+let tourStep = 0;
+const tourSteps = [
+    { element: '#nb-overview', message: 'Overview – see all your medications and stats.' },
+    { element: '#nb-add', message: 'Add Medication – set up a new medication with schedule.' },
+    { element: '#nb-track', message: 'Log Intake – mark doses as taken or missed.' },
+    { element: '#nb-history', message: 'Dose History – view your adherence records.' },
+    { element: '.sidebar .nav-btn[onclick*="profile"]', message: 'Profile Settings – update your email, phone, or password.' },
+    { element: '.sidebar .nav-btn[onclick*="Tour"]', message: 'You can restart this tour anytime.' },
+    { element: '.sidebar .nav-btn[onclick*="Support"]', message: 'Need help? Raise a support ticket here.' }
+];
+
+document.addEventListener('DOMContentLoaded', () => {
+  const stored = localStorage.getItem('user');
+  if (!stored) { go('login.html'); return; }
+  USER = JSON.parse(stored);
+  document.getElementById('tbUser').textContent = `${USER.firstName} ${USER.lastName}`;
+  document.getElementById('greetTitle').textContent = `Welcome back, ${USER.firstName}!`;
+  document.getElementById('greetDate').textContent = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  document.getElementById('fStart').valueAsDate = new Date();
+  addTime();
+  loadAll();
+  setActiveNav('nb-overview');
+});
+
+async function loadAll() { await Promise.all([ loadMeds(), loadHist() ]); }
+function showView(name) {
+  ['overview','track','history'].forEach(v => document.getElementById(`view-${v}`).classList.toggle('hidden', v !== name));
+  setActiveNav(`nb-${name}`);
+  if (name === 'track') renderTrack();
+  if (name === 'history') renderHistory();
+}
+function setActiveNav(id) { document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active')); const el = document.getElementById(id); if (el) el.classList.add('active'); }
+async function api(url, method = 'GET', body = null) { const opts = { method, headers: { 'Content-Type': 'application/json' } }; if (body) opts.body = JSON.stringify(body); return (await fetch(url, opts)).json(); }
+async function loadMeds() { try { const r = await api(`/api/medications/${USER.id}`); if (r.success) { MEDS = r.medications; renderMeds(); updateStats(); } else toast('Could not load medications.', 'error'); } catch { toast('Network error loading medications.', 'error'); } }
+async function loadHist() { try { const r = await api(`/api/medication-history/${USER.id}`); if (r.success) { HIST = r.history; updateStats(); } } catch {} }
+function renderMeds() {
+  const grid = document.getElementById('medGrid'); const empty = document.getElementById('noMeds'); grid.innerHTML = '';
+  if (!MEDS.length) { empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+  MEDS.forEach(med => {
+    const times = Array.isArray(med.schedule) ? med.schedule : JSON.parse(med.schedule || '[]');
+    const nextDose = calcNextDose(times);
+    const card = document.createElement('div'); card.className = 'med-card'; card.id = `mc-${med.id}`;
+    card.innerHTML = `<div class="med-card-hdr"><span class="med-card-name" title="${x(med.name)}">${x(med.name)}</span><button class="ico-act" title="Edit medication" onclick="openEditModal(${med.id})"><i class="fas fa-pen"></i></button><button class="ico-act del" title="Delete medication" onclick="confirmDelete(${med.id},'${x(med.name)}')"><i class="fas fa-trash"></i></button></div><div class="med-card-body"><div class="med-row"><span class="med-lbl">Dosage</span><span class="med-val">${x(med.dosage)}</span></div><div class="med-row"><span class="med-lbl">Frequency</span><span class="med-val">${x(med.frequency)}</span></div><div class="med-row"><span class="med-lbl">Times</span><span class="med-val">${times.join(', ') || '—'}</span></div><div class="med-row"><span class="med-lbl">Next dose</span><span class="med-val"><span class="badge badge-next">${x(nextDose)}</span></span></div><div class="med-row"><span class="med-lbl">Start date</span><span class="med-val">${fmtDate(med.start_date)}</span></div><div class="med-row"><span class="med-lbl">Status</span><span class="med-val"><span class="badge badge-active">● Active</span></span></div>${med.notes ? `<div class="med-row"><span class="med-lbl">Notes</span><span class="med-val" style="font-style:italic;color:var(--subtle)">${x(med.notes)}</span></div>` : ''}</div>`;
+    grid.appendChild(card);
+  });
+}
+function calcNextDose(times) { const now = new Date(); const hh = n => String(n).padStart(2,'0'); const cur = `${hh(now.getHours())}:${hh(now.getMinutes())}`; for (const t of times) if (t > cur) return `Today ${t}`; return times.length ? `Tomorrow ${times[0]}` : '—'; }
+function updateStats() {
+  const today = new Date().toISOString().split('T')[0];
+  let todayDoses = 0;
+  MEDS.forEach(m => { const t = Array.isArray(m.schedule) ? m.schedule : JSON.parse(m.schedule || '[]'); todayDoses += t.length; });
+  const taken = HIST.filter(h => h.status === 'taken' && (h.taken_at||'').startsWith(today)).length;
+  const missed = HIST.filter(h => h.status === 'missed' && (h.scheduled_time||'').startsWith(today)).length;
+  document.getElementById('stTotal').textContent = MEDS.length;
+  document.getElementById('stToday').textContent = todayDoses;
+  document.getElementById('stTaken').textContent = taken;
+  document.getElementById('stMissed').textContent = missed;
+}
+function renderTrack() {
+  const body = document.getElementById('trackBody');
+  if (!MEDS.length) { body.innerHTML = `<div class="empty-state"><i class="fas fa-pills"></i><p>No medications to track. <a href="#" onclick="openAddModal();return false">Add one now.</a></p></div>`; return; }
+  body.innerHTML = MEDS.map(med => { const times = Array.isArray(med.schedule) ? med.schedule : JSON.parse(med.schedule || '[]'); return `<div class="track-item"><div class="track-item-hdr"><div><div class="track-name">${x(med.name)}</div><div class="track-sub">${x(med.dosage)} · ${x(med.frequency)}</div></div><div class="track-btns"><button class="btn btn-sm" style="background:var(--g-light);color:var(--g-main);border:1px solid var(--g-mid);" onclick="logIntake(${med.id},'taken')"><i class="fas fa-check"></i> Taken</button><button class="btn btn-sm btn-danger" onclick="logIntake(${med.id},'missed')"><i class="fas fa-times"></i> Missed</button></div></div><div class="track-item-body"><i class="fas fa-clock" style="color:var(--g-mid);margin-right:5px"></i> Scheduled: ${times.join(', ') || '—'}</div></div>`; }).join('');
+}
+async function logIntake(medId, status) { try { const r = await api('/api/medication-history', 'POST', { userId: USER.id, medicationId: medId, status }); if (r.success) { await loadHist(); toast(`Logged as ${status}`, 'success'); } } catch { toast('Could not log intake.', 'error'); } }
+function renderHistory() {
+  const tbody = document.getElementById('histBody'); const empty = document.getElementById('histEmpty'); tbody.innerHTML = '';
+  if (!HIST.length) { empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+  HIST.forEach(h => { const raw = h.taken_at || h.scheduled_time || ''; const dt = raw ? new Date(raw.replace(' ', 'T')) : null; const date = dt && !isNaN(dt) ? dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'; const time = dt && !isNaN(dt) ? dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—'; tbody.insertAdjacentHTML('beforeend', `<tr><td>${x(h.medication_name || '—')}</td><td>${x(h.dosage || '—')}</td><td>${date}</td><td>${time}</td><td class="${h.status === 'taken' ? 'st-taken' : 'st-missed'}">${h.status === 'taken' ? '✓ Taken' : '✗ Missed'}</td></tr>`); });
+}
+function openAddModal() { EDIT_ID = null; document.getElementById('editId').value = ''; document.getElementById('medForm').reset(); document.getElementById('fStart').valueAsDate = new Date(); document.getElementById('timeList').innerHTML = ''; addTime(); document.getElementById('medModalLabel').innerHTML = '<i class="fas fa-plus-circle"></i> Add Medication'; document.getElementById('medSaveBtn').innerHTML = '<i class="fas fa-save"></i> Save Medication'; document.getElementById('medOverlay').classList.add('open'); setActiveNav('nb-add'); }
+function openEditModal(medId) { const med = MEDS.find(m => m.id === medId); if (!med) return; EDIT_ID = medId; document.getElementById('editId').value = medId; document.getElementById('fName').value = med.name; document.getElementById('fDosage').value = med.dosage; document.getElementById('fFreq').value = med.frequency; document.getElementById('fStart').value = med.start_date || ''; document.getElementById('fEnd').value = med.end_date || ''; document.getElementById('fNotes').value = med.notes || ''; const times = Array.isArray(med.schedule) ? med.schedule : JSON.parse(med.schedule || '[]'); document.getElementById('timeList').innerHTML = ''; if (times.length) times.forEach(t => addTime(t)); else addTime(); document.getElementById('medModalLabel').innerHTML = '<i class="fas fa-pen"></i> Edit Medication'; document.getElementById('medSaveBtn').innerHTML = '<i class="fas fa-save"></i> Update Medication'; document.getElementById('medOverlay').classList.add('open'); }
+function closeMedModal() { document.getElementById('medOverlay').classList.remove('open'); EDIT_ID = null; }
+function addTime(val = '') { const list = document.getElementById('timeList'); const row = document.createElement('div'); row.className = 'time-row'; row.innerHTML = `<input type="time" class="fi time-val" value="${val}" required><button type="button" class="rm-time" onclick="removeTime(this)" title="Remove this time"><i class="fas fa-minus"></i></button>`; list.appendChild(row); }
+function removeTime(btn) { const rows = document.querySelectorAll('.time-row'); if (rows.length <= 1) { toast('At least one reminder time is required.', 'info'); return; } btn.closest('.time-row').remove(); }
+async function saveMedication(e) { e.preventDefault(); const times = [...document.querySelectorAll('.time-val')].map(i => i.value).filter(Boolean); if (!times.length) { toast('Please add at least one reminder time.', 'error'); return; } const payload = { userId: USER.id, name: document.getElementById('fName').value.trim(), dosage: document.getElementById('fDosage').value.trim(), frequency: document.getElementById('fFreq').value, schedule: times, startDate: document.getElementById('fStart').value, endDate: document.getElementById('fEnd').value || null, notes: document.getElementById('fNotes').value.trim() }; const btn = document.getElementById('medSaveBtn'); btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…'; try { const isEdit = !!EDIT_ID; const r = await api(isEdit ? `/api/medications/${EDIT_ID}` : '/api/medications', isEdit ? 'PUT' : 'POST', payload); if (r.success) { toast(isEdit ? 'Medication updated!' : 'Medication added!', 'success'); closeMedModal(); await loadMeds(); showView('overview'); } else { toast(r.message || 'Save failed.', 'error'); } } catch { toast('Network error.', 'error'); } finally { btn.disabled = false; btn.innerHTML = EDIT_ID ? '<i class="fas fa-save"></i> Update Medication' : '<i class="fas fa-save"></i> Save Medication'; } }
+
+function confirmDelete(medId, name) { pendingDeleteId = medId; document.getElementById('confirmMsg').textContent = `Remove "${name}"?`; document.getElementById('confirmOverlay').classList.add('open'); document.getElementById('confirmOk').onclick = doDelete; }
+function closeConfirm() { document.getElementById('confirmOverlay').classList.remove('open'); pendingDeleteId = null; }
+async function doDelete() {
+  if (!pendingDeleteId) return;
+  const medId = pendingDeleteId;
+  closeConfirm();
+  try {
+    const r = await api(`/api/medications/${medId}`, 'DELETE', { userId: USER.id });
+    if (r.success) {
+      const card = document.getElementById(`mc-${medId}`);
+      if (card) card.remove();
+      MEDS = MEDS.filter(m => m.id !== medId);
+      renderMeds();
+      updateStats();
+      toast('Medication removed.', 'success');
+      await loadMeds();
+    } else {
+      toast(r.message || 'Delete failed.', 'error');
+    }
+  } catch { toast('Network error.', 'error'); }
+  pendingDeleteId = null;
+}
+
+function startTour() { tourStep = 0; showTourStep(); }
+function showTourStep() { if (tourStep >= tourSteps.length) { toast('Tour completed!', 'success'); return; } const step = tourSteps[tourStep]; const el = document.querySelector(step.element); if (!el) { tourStep++; showTourStep(); return; } el.style.transition = 'box-shadow 0.2s'; el.style.boxShadow = '0 0 0 4px #4a8c3a, 0 0 0 8px rgba(74,140,58,0.3)'; let tooltip = document.getElementById('tourTooltip'); if (!tooltip) { tooltip = document.createElement('div'); tooltip.id = 'tourTooltip'; tooltip.style.position = 'fixed'; tooltip.style.backgroundColor = 'white'; tooltip.style.border = '2px solid #2d5a27'; tooltip.style.borderRadius = '12px'; tooltip.style.padding = '12px 16px'; tooltip.style.maxWidth = '280px'; tooltip.style.zIndex = '10000'; tooltip.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)'; document.body.appendChild(tooltip); } const rect = el.getBoundingClientRect(); tooltip.style.left = rect.left + window.scrollX + 'px'; tooltip.style.top = rect.bottom + window.scrollY + 8 + 'px'; tooltip.innerHTML = `<div style="font-weight:800;margin-bottom:5px;">Step ${tourStep+1}/${tourSteps.length}</div><p style="margin-bottom:8px;">${step.message}</p><div style="display:flex;gap:8px;justify-content:flex-end;"><button class="btn btn-secondary btn-sm" onclick="endTour()">Skip</button><button class="btn btn-primary btn-sm" onclick="nextTourStep()">Next</button></div>`; tooltip.style.display = 'block'; }
+function nextTourStep() { const el = document.querySelector(tourSteps[tourStep].element); if (el) el.style.boxShadow = ''; const tooltip = document.getElementById('tourTooltip'); if (tooltip) tooltip.style.display = 'none'; tourStep++; showTourStep(); }
+function endTour() { const tooltip = document.getElementById('tourTooltip'); if (tooltip) tooltip.remove(); const highlighted = document.querySelector('[style*="box-shadow: 0 0 0 4px #4a8c3a"]'); if (highlighted) highlighted.style.boxShadow = ''; toast('Tour ended', 'info'); }
+function openSupportModal() { document.getElementById('supportOverlay').classList.add('open'); }
+function closeSupportModal() { document.getElementById('supportOverlay').classList.remove('open'); document.getElementById('supportForm').reset(); }
+async function submitTicket(e) { e.preventDefault(); const subject = document.getElementById('ticketSubject').value.trim(); const priority = document.getElementById('ticketPriority').value; const message = document.getElementById('ticketMessage').value.trim(); if (!subject || !message) return toast('Please fill subject and message', 'error'); try { const res = await fetch('/api/support-ticket', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: USER.id, subject, message, priority }) }); const data = await res.json(); if (data.success) { toast('Ticket submitted!', 'success'); closeSupportModal(); } else { toast(data.message || 'Failed to submit ticket', 'error'); } } catch { toast('Network error', 'error'); } }
+function x(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtDate(ds) { if (!ds) return '—'; const d = new Date(ds.includes('T') ? ds : ds + 'T00:00:00'); return isNaN(d) ? ds : d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+function go(url) { document.body.style.transition = 'opacity .22s ease'; document.body.style.opacity = '0'; setTimeout(() => { window.location.href = url; }, 220); }
+function logout() { localStorage.removeItem('user'); go('index.html'); }
+function toast(msg, type = 'info') { const wrap = document.getElementById('toastWrap'); const el = document.createElement('div'); el.className = `toast ${type}`; const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' }; el.innerHTML = `<i class="fas ${icons[type] || 'fa-info-circle'}"></i> ${x(msg)}`; wrap.appendChild(el); setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3500); }
+
+
+</script>
+</body>
+</html>

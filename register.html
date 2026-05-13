@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register – MIRA</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #f8fdf7 0%, #e8f5e9 100%); color: #2d5a27; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .container { max-width: 500px; width: 100%; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .logo { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
+        .logo i { font-size: 2.5rem; color: #2d5a27; }
+        .logo-text { font-size: 2.2rem; font-weight: 700; color: #2d5a27; }
+        .tagline { font-size: 1.1rem; color: #4a8c3a; margin-bottom: 10px; }
+        .form-container { background-color: white; border-radius: 15px; padding: 40px; box-shadow: 0 10px 30px rgba(45, 90, 39, 0.1); }
+        .form-title { text-align: center; margin-bottom: 30px; color: #2d5a27; font-size: 1.8rem; }
+        .form-row { display: flex; gap: 15px; }
+        .form-row .form-group { flex: 1; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #2d5a27; }
+        .input-with-icon { position: relative; }
+        .input-with-icon i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #4a8c3a; }
+        input, select { width: 100%; padding: 15px 15px 15px 45px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; transition: all 0.3s; background-color: #f9fff8; }
+        select { padding: 15px 15px 15px 45px; appearance: none; cursor: pointer; }
+        input:focus, select:focus { outline: none; border-color: #2d5a27; box-shadow: 0 0 0 3px rgba(45, 90, 39, 0.1); }
+        .captcha-wrapper { margin-bottom: 20px; background: #f9fff8; border-radius: 12px; padding: 20px; border: 2px solid #e0e0e0; }
+        .captcha-wrapper label { font-size: 1.1rem; margin-bottom: 15px; color: #2d5a27; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .captcha-display-box { display: flex; align-items: stretch; gap: 12px; margin-bottom: 15px; }
+        .captcha-chars-container { background: #ffffff; border: 3px solid #2d5a27; border-radius: 10px; cursor: pointer; height: 100px; min-width: 300px; flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 8px rgba(45, 90, 39, 0.15); transition: all 0.3s ease; overflow: hidden; font-family: monospace; font-weight: bold; font-size: 2.2rem; background: #fefefe; }
+        .captcha-chars-container:hover { background: #f0f8f0; border-color: #1f3e1b; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(45, 90, 39, 0.25); }
+        .captcha-char { display: inline-block; -webkit-user-select: none; user-select: none; transform-origin: center; }
+        .captcha-refresh-btn { background: #e8f5e9; border: 3px solid #2d5a27; color: #2d5a27; width: 70px; height: 100px; border-radius: 10px; cursor: pointer; transition: all 0.3s ease; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; }
+        .captcha-refresh-btn:hover { background: #2d5a27; color: white; transform: scale(1.02); }
+        .captcha-input-wrapper { position: relative; }
+        .captcha-input-wrapper i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: #4a8c3a; font-size: 1.2rem; z-index: 2; }
+        #captcha { width: 100%; padding: 18px 18px 18px 50px; border: 3px solid #e0e0e0; border-radius: 10px; font-size: 1.4rem; transition: all 0.3s ease; background-color: #ffffff; text-align: center; letter-spacing: 3px; font-weight: 600; color: #2d5a27; height: 60px; }
+        #captcha:focus { outline: none; border-color: #2d5a27; box-shadow: 0 0 0 4px rgba(45, 90, 39, 0.15); }
+        .captcha-hint-box { margin-top: 12px; padding: 12px 15px; background: #e8f5e9; border-radius: 8px; border-left: 4px solid #2d5a27; }
+        .captcha-hint-box p { margin: 0; color: #2d5a27; font-size: 0.95rem; }
+        .form-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 30px; gap: 15px; }
+        .btn { padding: 14px 30px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-primary { background-color: #2d5a27; color: white; flex: 1; }
+        .btn-primary:hover:not(:disabled) { background-color: #1f3e1b; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(45, 90, 39, 0.2); }
+        .btn-primary:disabled { background-color: #a8c5a3; cursor: not-allowed; }
+        .btn-secondary { background-color: white; color: #2d5a27; border: 2px solid #2d5a27; }
+        .btn-secondary:hover { background-color: #f0f8f0; }
+        .login-link { text-align: center; margin-top: 25px; color: #2d5a27; }
+        .login-link a { color: #2d5a27; font-weight: 600; text-decoration: none; transition: color 0.3s; }
+        .login-link a:hover { color: #4a8c3a; text-decoration: underline; }
+        .alert { padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: none; align-items: center; gap: 10px; }
+        .alert-error { background-color: #fee; color: #c33; border: 1px solid #fcc; }
+        .alert-success { background-color: #efe; color: #2d5a27; border: 1px solid #cfc; }
+        .alert.show { display: flex; }
+        @media (max-width: 768px) {
+            .form-container { padding: 30px 20px; }
+            .form-row { flex-direction: column; gap: 0; }
+            .form-actions { flex-direction: column; }
+            .btn { width: 100%; }
+            .captcha-display-box { flex-direction: column; }
+            .captcha-refresh-btn { width: 100%; height: 50px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo"><i class="fas fa-pills"></i><span class="logo-text">Mira</span></div>
+            <p class="tagline">Medication and Intake Reminder for Institutions and Appointments</p>
+        </div>
+        <div class="form-container">
+            <h2 class="form-title">Create Account</h2>
+            <div id="alertBox" class="alert"><i class="fas fa-exclamation-circle"></i><span id="alertMessage"></span></div>
+            <form id="registerForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="firstName">First Name</label>
+                        <div class="input-with-icon"><i class="fas fa-user"></i><input type="text" id="firstName" required placeholder="First name"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="lastName">Last Name</label>
+                        <div class="input-with-icon"><i class="fas fa-user"></i><input type="text" id="lastName" required placeholder="Last name"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="middleName">Middle Name (Optional)</label>
+                    <div class="input-with-icon"><i class="fas fa-user"></i><input type="text" id="middleName" placeholder="Middle name"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="gender">Gender</label>
+                        <div class="input-with-icon"><i class="fas fa-venus-mars"></i>
+                            <select id="gender" required>
+                                <option value="">Select…</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="dateOfBirth">Date of Birth</label>
+                        <div class="input-with-icon"><i class="fas fa-calendar"></i><input type="date" id="dateOfBirth" required></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <div class="input-with-icon"><i class="fas fa-envelope"></i><input type="email" id="email" required placeholder="Enter your email"></div>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <div class="input-with-icon"><i class="fas fa-phone"></i><input type="tel" id="phone" required placeholder="+1234567890"></div>
+                </div>
+                <div class="form-group">
+                    <label for="reminderMethod">Reminder Delivery Method</label>
+                    <div class="input-with-icon"><i class="fas fa-bell"></i>
+                        <select id="reminderMethod" required>
+                            <option value="email">Email</option>
+                            <option value="sms" disabled>SMS (coming soon)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-with-icon"><i class="fas fa-lock"></i><input type="password" id="password" required placeholder="Min 8 characters"></div>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <div class="input-with-icon"><i class="fas fa-lock"></i><input type="password" id="confirmPassword" required placeholder="Confirm password"></div>
+                </div>
+                <div class="captcha-wrapper">
+                    <label for="captcha"><i class="fas fa-shield-alt"></i> Security Verification</label>
+                    <div class="captcha-display-box">
+                        <div class="captcha-chars-container" id="captchaContainer" onclick="generateCaptcha()"></div>
+                        <button type="button" class="captcha-refresh-btn" onclick="generateCaptcha()" title="Refresh CAPTCHA"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div class="captcha-input-wrapper"><i class="fas fa-keyboard"></i><input type="text" id="captcha" required placeholder="Enter the code shown above" maxlength="6" autocomplete="off"></div>
+                    <div class="captcha-hint-box"><p><i class="fas fa-universal-access"></i> <strong>Tip:</strong> Enter the 5‑6 characters shown. Click the image or refresh button to get a new code.</p></div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="window.location.href='index.html'"><i class="fas fa-arrow-left"></i> Back Home</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn"><i class="fas fa-user-plus"></i> Register</button>
+                </div>
+                <div class="login-link">Already have an account? <a href="login.html">Login here</a></div>
+            </form>
+        </div>
+    </div>
+    <script>
+        let currentCaptchaText = '';
+        function generateCaptcha() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let result = '';
+            for (let i = 0; i < 5; i++) result += chars[Math.floor(Math.random() * chars.length)];
+            currentCaptchaText = result;
+            const container = document.getElementById('captchaContainer');
+            container.innerHTML = '';
+            const COLORS = ['#1a3d15','#2d5a27','#1e5c1a','#153d12','#0f3a0d','#184e14','#265421','#1b4718'];
+            for (let i = 0; i < currentCaptchaText.length; i++) {
+                const span = document.createElement('span');
+                span.className = 'captcha-char';
+                span.textContent = currentCaptchaText[i];
+                const deg = Math.floor(Math.random() * 24) - 12;
+                const clr = COLORS[Math.floor(Math.random() * COLORS.length)];
+                const mt = Math.floor(Math.random() * 10);
+                span.style.cssText = `color:${clr};transform:rotate(${deg}deg) translateY(${mt}px);display:inline-block;font-size:2rem;font-weight:bold;margin:0 4px;`;
+                container.appendChild(span);
+            }
+            document.getElementById('captcha').value = '';
+        }
+        document.addEventListener('DOMContentLoaded', generateCaptcha);
+        function showAlert(message, type = 'error') {
+            const box = document.getElementById('alertBox');
+            box.className = `alert alert-${type} show`;
+            document.getElementById('alertMessage').textContent = message;
+            setTimeout(() => box.classList.remove('show'), 5000);
+        }
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const firstName = document.getElementById('firstName').value.trim();
+            const middleName = document.getElementById('middleName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            const gender = document.getElementById('gender').value;
+            const dateOfBirth = document.getElementById('dateOfBirth').value;
+            const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const reminderMethod = document.getElementById('reminderMethod').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const userCaptcha = document.getElementById('captcha').value.trim();
+            if (!firstName || !lastName || !email || !phone || !password || !gender || !dateOfBirth) {
+                showAlert('Please fill all required fields.');
+                return;
+            }
+            if (password.length < 8) { showAlert('Password too short.'); return; }
+            if (password !== confirmPassword) { showAlert('Passwords do not match.'); return; }
+            if (!userCaptcha || userCaptcha.toUpperCase() !== currentCaptchaText.toUpperCase()) {
+                showAlert('Incorrect security code.');
+                generateCaptcha();
+                return;
+            }
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating account...';
+            submitBtn.disabled = true;
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        firstName, middleName, lastName, email, phone, password,
+                        gender, dateOfBirth,
+})
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showAlert('Registration successful! Redirecting...', 'success');
+                    setTimeout(() => window.location.href = 'login.html', 1500);
+                } else {
+                    showAlert(data.message || 'Registration failed.');
+                    submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> Register';
+                    submitBtn.disabled = false;
+                }
+            } catch (error) {
+                showAlert('Network error.');
+                submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> Register';
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

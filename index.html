@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>MIRA – Medication and Intake Reminder for Institutions and s</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --g-dark:#1f3e1b; --g-main:#2d5a27; --g-mid:#4a8c3a;
+  --g-light:#e8f5e9; --g-pale:#f0f9f0; --g-xpale:#f8fdf7;
+  --white:#fff; --border:#d4e8d0; --r:12px; --rs:8px;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--g-xpale);
+  color:#1a2e18;animation:pageIn .35s ease both;}
+@keyframes pageIn{from{opacity:0}to{opacity:1}}
+
+/* HEADER */
+header{height:64px;background:var(--g-dark);display:flex;align-items:center;
+  padding:0 28px;gap:14px;position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 14px rgba(0,0,0,.3);}
+.logo{display:flex;align-items:center;gap:9px;font-size:1.5rem;font-weight:800;color:#fff;}
+.logo i{color:#8bc34a;font-size:1.55rem;}
+.hsp{flex:1;}
+.hbtn{padding:8px 18px;border-radius:var(--rs);font-size:.875rem;font-weight:700;
+  cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:7px;
+  transition:all .18s;}
+.hbtn-out{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.35);}
+.hbtn-out:hover{background:rgba(255,255,255,.14);}
+.hbtn-fill{background:#8bc34a;color:#1a3d10;border:none;}
+.hbtn-fill:hover{background:#9ccc65;transform:translateY(-1px);}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,var(--g-dark) 0%,var(--g-mid) 100%);
+  color:#fff;text-align:center;padding:70px 24px 78px;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;inset:0;
+  background:url("data:image/svg+xml,%3Csvg width='56' height='56' viewBox='0 0 56 56' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M28 4v4h-4v2h4v4h2v-4h4v-2h-4V4zM4 28v4H0v2h4v4h2v-4h4v-2H6v-4zM52 28v4h-4v2h4v4h2v-4h4v-2h-4v-4z'/%3E%3C/g%3E%3C/svg%3E");}
+.hero-inner{position:relative;max-width:700px;margin:0 auto;}
+.hero h1{font-size:2.8rem;font-weight:800;margin-bottom:16px;line-height:1.2;}
+.hero h1 span{color:#8bc34a;}
+.hero p{font-size:1.05rem;opacity:.88;max-width:520px;margin:0 auto 32px;line-height:1.75;}
+.cta-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.cta{padding:14px 32px;border-radius:30px;font-size:1rem;font-weight:800;
+  cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all .2s;}
+.cta-white{background:#fff;color:var(--g-dark);border:none;}
+.cta-white:hover{background:#f0f9f0;transform:translateY(-2px);box-shadow:0 6px 22px rgba(0,0,0,.15);}
+.cta-ghost{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.45);}
+.cta-ghost:hover{background:rgba(255,255,255,.12);}
+
+/* STATS STRIP */
+.strip{background:var(--g-main);padding:22px 28px;
+  display:flex;justify-content:center;gap:52px;flex-wrap:wrap;}
+.strip-item{text-align:center;color:#fff;}
+.strip-num{font-size:1.8rem;font-weight:900;color:#8bc34a;}
+.strip-lbl{font-size:.78rem;opacity:.72;margin-top:2px;}
+
+/* FEATURES */
+.section{max-width:1080px;margin:0 auto;padding:60px 24px;}
+.sec-title{text-align:center;font-size:1.7rem;font-weight:800;color:var(--g-dark);margin-bottom:8px;}
+.sec-sub{text-align:center;color:#4a5a47;font-size:.9rem;max-width:500px;margin:0 auto 44px;}
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:20px;}
+.feat-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);
+  padding:26px 22px;transition:all .2s;}
+.feat-card:hover{box-shadow:0 6px 24px rgba(45,90,39,.12);transform:translateY(-4px);}
+.feat-ico{width:50px;height:50px;border-radius:11px;background:var(--g-light);
+  display:flex;align-items:center;justify-content:center;font-size:1.25rem;
+  color:var(--g-main);margin-bottom:15px;}
+.feat-title{font-size:.95rem;font-weight:800;color:var(--g-dark);margin-bottom:8px;}
+.feat-desc{font-size:.855rem;color:#4a5a47;line-height:1.65;}
+
+/* HOW IT WORKS */
+.how{background:var(--g-light);padding:60px 24px;}
+.how-inner{max-width:900px;margin:0 auto;}
+.steps{display:flex;gap:0;flex-wrap:wrap;margin-top:40px;}
+.step{flex:1;min-width:180px;text-align:center;padding:0 18px;position:relative;}
+.step:not(:last-child)::after{content:'';position:absolute;top:28px;right:-4px;
+  width:8px;height:2px;background:var(--g-mid);}
+.step-n{width:56px;height:56px;border-radius:50%;background:var(--g-main);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;font-weight:900;margin:0 auto 14px;}
+.step-t{font-size:.9rem;font-weight:800;color:var(--g-dark);margin-bottom:6px;}
+.step-d{font-size:.82rem;color:#4a5a47;line-height:1.6;}
+
+/* CTA BANNER */
+.cta-band{background:linear-gradient(135deg,var(--g-dark),var(--g-mid));
+  padding:62px 24px;text-align:center;color:#fff;}
+.cta-band h2{font-size:2rem;font-weight:800;margin-bottom:12px;}
+.cta-band p{font-size:.95rem;opacity:.85;max-width:440px;margin:0 auto 30px;}
+.auth-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.auth-btn{padding:13px 34px;border-radius:30px;font-size:.95rem;font-weight:800;
+  text-decoration:none;display:inline-flex;align-items:center;gap:7px;transition:all .2s;}
+.ab-solid{background:#fff;color:var(--g-dark);}
+.ab-solid:hover{background:#f0f9f0;transform:translateY(-1px);}
+.ab-ghost{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.4);}
+.ab-ghost:hover{background:rgba(255,255,255,.12);}
+
+/* FOOTER */
+footer{background:var(--g-dark);padding:40px 28px 22px;}
+.footer-grid{max-width:1080px;margin:0 auto;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:30px;margin-bottom:28px;}
+.fb-logo{display:flex;align-items:center;gap:8px;font-size:1.15rem;
+  font-weight:800;color:#fff;margin-bottom:9px;}
+.fb-logo i{color:#8bc34a;}
+.fb-text{font-size:.83rem;color:#c8e6c9;opacity:.7;line-height:1.6;}
+.fh{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;
+  color:#8bc34a;margin-bottom:11px;}
+.flinks{list-style:none;}
+.flinks li{margin-bottom:7px;}
+.flinks a{color:#c8e6c9;opacity:.7;font-size:.83rem;text-decoration:none;transition:opacity .15s;}
+.flinks a:hover{opacity:1;}
+.fcopy{border-top:1px solid rgba(255,255,255,.1);padding-top:18px;
+  text-align:center;font-size:.78rem;color:#c8e6c9;opacity:.5;
+  max-width:1080px;margin:0 auto;}
+
+@media(max-width:700px){
+  .hero h1{font-size:2rem;}.strip{gap:24px;}
+  .step:not(:last-child)::after{display:none;}.header{padding:0 16px;}
+}
+</style>
+
+<!-- PWA Meta Tags -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#2d5a27">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MIRA">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+</head>
+<body>
+
+<header>
+  <div class="logo"><i class="fas fa-pills"></i>Mira</div>
+  <div class="hsp"></div>
+  <a href="login.html" class="hbtn hbtn-out"><i class="fas fa-sign-in-alt"></i>Login</a>
+  <a href="register.html" class="hbtn hbtn-fill"><i class="fas fa-user-plus"></i>Get Started</a>
+</header>
+
+<section class="hero">
+  <div class="hero-inner">
+    <h1>Empowering Institutions. <span>Protecting Patients.</span></h1>
+    <p>MIRA helps clinics, hospitals, and care institutions manage patient medication adherence — powered by intelligent n8n workflow automation.</p>
+    <div class="cta-row">
+      <a href="register.html" class="cta cta-white"><i class="fas fa-rocket"></i>Get Started Free</a>
+      <a href="login.html" class="cta cta-ghost"><i class="fas fa-sign-in-alt"></i>Login</a>
+    </div>
+  </div>
+</section>
+
+<div class="strip">
+  <div class="strip-item"><div class="strip-num">3 in 5</div><div class="strip-lbl">patients miss doses in chronic care</div></div>
+  <div class="strip-item"><div class="strip-num">$300B</div><div class="strip-lbl">annual cost of non-adherence</div></div>
+  <div class="strip-item"><div class="strip-num">n8n</div><div class="strip-lbl">intelligent workflow engine</div></div>
+  <div class="strip-item"><div class="strip-num"></div><div class="strip-lbl"> reminder window</div></div>
+</div>
+
+<section class="section">
+  <div class="sec-title">Built for Healthcare Institutions</div>
+  <div class="sec-sub">MIRA combines institutional patient management with automated reminder delivery so no dose or  is ever missed.</div>
+  <div class="feat-grid">
+    <div class="feat-card"><div class="feat-ico"><i class="fas fa-bell"></i></div>
+      <div class="feat-title">Smart Reminders</div>
+      <div class="feat-desc">Personalised notifications via email at exactly the times you set — powered by n8n workflow automation with adaptive logic.</div></div>
+    <div class="feat-card"><div class="feat-ico"><i class="fas fa-calendar-check"></i></div>
+      <div class="feat-title">Flexible Scheduling</div>
+      <div class="feat-desc">Set multiple reminder times per medication. Edit or update at any time — changes reflect on the database and all future reminders immediately.</div></div>
+    <div class="feat-card"><div class="feat-ico"><i class="fas fa-chart-bar"></i></div>
+      <div class="feat-title">Adherence Tracking</div>
+      <div class="feat-desc">Log each dose as taken or missed and view your full history. Understand your medication patterns at a glance on the dashboard.</div></div>
+    <div class="feat-card"><div class="feat-ico"><i class="fas fa-cloud-upload-alt"></i></div>
+      <div class="feat-title">Auto Cloud Sync</div>
+      <div class="feat-desc">Your medication data syncs to Google Sheets every 5 minutes — name, email, medication, dosage, times, and phone — for caregiver monitoring.</div></div>
+    <div class="feat-card"><div class="feat-ico"><i class="fas fa-shield-alt"></i></div>
+      <div class="feat-title">Secure &amp; Verified</div>
+      <div class="feat-desc">Passwords hashed with bcrypt. All profile changes require 6-digit OTP email verification before being applied.</div></div>
+    <div class="feat-card"><div class="feat-ico"><i class="fas fa-mobile-alt"></i></div>
+      <div class="feat-title">Works Everywhere</div>
+      <div class="feat-desc">Fully responsive web interface — access your dashboard from any phone, tablet, or computer with no app to install.</div></div>
+  </div>
+</section>
+
+<section class="how">
+  <div class="how-inner">
+    <div class="sec-title">How Mira Works</div>
+    <div class="sec-sub">Four simple steps to better medication adherence.</div>
+    <div class="steps">
+      <div class="step"><div class="step-n">1</div>
+        <div class="step-t">Register</div>
+        <div class="step-d">Create a free account with your name, email, and phone number in under a minute.</div></div>
+      <div class="step"><div class="step-n">2</div>
+        <div class="step-t">Add Medications</div>
+        <div class="step-d">Enter each medication with dosage, frequency, and your preferred reminder times.</div></div>
+      <div class="step"><div class="step-n">3</div>
+        <div class="step-t">Get Reminded</div>
+        <div class="step-d">Mira's automation engine sends personalised email reminders at each scheduled time.</div></div>
+      <div class="step"><div class="step-n">4</div>
+        <div class="step-t">Track Progress</div>
+        <div class="step-d">Log doses and review your adherence history to stay consistent and healthy.</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-band">
+  <h2>Ready to Transform Patient Care?</h2>
+  <p>Register your institution today and start managing patient medication adherences in minutes.</p>
+  <div class="auth-row">
+    <a href="register.html" class="auth-btn ab-solid"><i class="fas fa-user-plus"></i>Create Free Account</a>
+    <a href="login.html" class="auth-btn ab-ghost"><i class="fas fa-sign-in-alt"></i>Login</a>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="fb-logo"><i class="fas fa-pills"></i>Mira</div>
+      <div class="fb-text">An institutional n8n workflow-based medication adherence system. Designed for healthcare facilities. JKUAT IT Research 2026.</div>
+    </div>
+    <div>
+      <div class="fh">Quick Links</div>
+      <ul class="flinks">
+        <li><a href="login.html">Login</a></li>
+        <li><a href="register.html">Register</a></li>
+        <li><a href="forgot-password.html">Forgot Password</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="fh">Contact</div>
+      <ul class="flinks">
+        <li><a href="#">support@mira.health</a></li>
+        <li><a href="#">Nairobi, Kenya</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="fcopy">&copy; 2026 MIRA – Medication and Intake Reminder for Institutions and s. All rights reserved.</div>
+</footer>
+
+<script>
+// Fade-out transitions
+document.querySelectorAll('a[href]').forEach(a => {
+  const href = a.getAttribute('href');
+  if (!href || href.startsWith('#') || href.startsWith('mailto')) return;
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    document.body.style.transition = 'opacity .22s ease';
+    document.body.style.opacity    = '0';
+    setTimeout(() => { window.location.href = href; }, 220);
+  });
+});
+</script>
+</body>
+</html>
