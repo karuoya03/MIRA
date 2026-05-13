@@ -19,6 +19,7 @@
     "jsonwebtoken": "^9.0.3",
     "node-cron": "^4.2.1",
     "nodemailer": "^6.10.1",
+    "pg": "^8.11.3",
     "sqlite3": "^5.1.7",
     "svg-captcha": "^1.4.0",
     "twilio": "^4.23.0",
@@ -26,8 +27,5 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  }
 }
