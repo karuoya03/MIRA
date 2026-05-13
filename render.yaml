@@ -27,13 +27,12 @@ services:
       - key: APP_URL
         sync: false
 
-  # n8n automation service (uses PostgreSQL for persistence, no disk needed)
+  # n8n automation service – using public Docker image
   - type: web
     name: mira-n8n
     runtime: image
-    repo: https://github.com/karuoya03/MIRA.git
+    image: n8nio/n8n:latest
     plan: free
-    dockerfilePath: ./Dockerfile.n8n
     envVars:
       - key: N8N_ENCRYPTION_KEY
         generateValue: true
@@ -49,6 +48,7 @@ services:
         fromDatabase:
           name: mira-n8n-db
           property: connectionString
+    # No disks needed – n8n will use PostgreSQL for storage
 
 databases:
   - name: mira-db
