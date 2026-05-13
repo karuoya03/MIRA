@@ -31,7 +31,8 @@ services:
   - type: web
     name: mira-n8n
     runtime: image
-    image: n8nio/n8n:latest
+    image:
+      url: n8nio/n8n:latest
     plan: free
     envVars:
       - key: N8N_ENCRYPTION_KEY
@@ -48,7 +49,6 @@ services:
         fromDatabase:
           name: mira-n8n-db
           property: connectionString
-    # No disks needed – n8n will use PostgreSQL for storage
 
 databases:
   - name: mira-db
