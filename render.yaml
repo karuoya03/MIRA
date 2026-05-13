@@ -3,7 +3,7 @@ services:
   - type: web
     name: mira-backend
     runtime: node
-    repo: https://karuoya03.github.io/MIRA/  # replace with your repo URL
+    repo: https://github.com/karuoya03/MIRA.git   # <-- FIXED
     plan: free
     buildCommand: npm install
     startCommand: node server.js
@@ -16,7 +16,6 @@ services:
         value: 3000
       - key: NODE_VERSION
         value: 20
-      # Add your other env vars (EMAIL_USER, EMAIL_PASS, GOOGLE_SHEETS_ID, GOOGLE_CREDENTIALS_JSON, etc.)
       - key: EMAIL_USER
         sync: false
       - key: EMAIL_PASS
@@ -32,7 +31,7 @@ services:
   - type: web
     name: mira-n8n
     runtime: image
-    repo: https://karuoya03.github.io/MIRA/
+    repo: https://github.com/karuoya03/MIRA.git   # <-- FIXED
     plan: free
     dockerfilePath: ./Dockerfile.n8n
     envVars:
@@ -41,11 +40,11 @@ services:
       - key: N8N_BASIC_AUTH_ACTIVE
         value: "true"
       - key: N8N_BASIC_AUTH_USER
-        sync: false        # you'll set this manually in Render dashboard
+        sync: false
       - key: N8N_BASIC_AUTH_PASSWORD
-        sync: false        # set manually
+        sync: false
       - key: WEBHOOK_URL
-        sync: false        # set to your n8n service URL after deployment
+        sync: false
       - key: DATABASE_URL
         fromDatabase:
           name: mira-n8n-db
