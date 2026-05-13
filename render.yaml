@@ -3,7 +3,7 @@ services:
   - type: web
     name: mira-backend
     runtime: node
-    repo: https://github.com/karuoya03/MIRA.git   # <-- FIXED
+    repo: https://github.com/karuoya03/MIRA.git
     plan: free
     buildCommand: npm install
     startCommand: node server.js
@@ -27,11 +27,11 @@ services:
       - key: APP_URL
         sync: false
 
-  # n8n automation service
+  # n8n automation service (uses PostgreSQL for persistence, no disk needed)
   - type: web
     name: mira-n8n
     runtime: image
-    repo: https://github.com/karuoya03/MIRA.git   # <-- FIXED
+    repo: https://github.com/karuoya03/MIRA.git
     plan: free
     dockerfilePath: ./Dockerfile.n8n
     envVars:
@@ -49,10 +49,6 @@ services:
         fromDatabase:
           name: mira-n8n-db
           property: connectionString
-    disks:
-      - name: n8n-data
-        mountPath: /root/.n8n
-        sizeGB: 1
 
 databases:
   - name: mira-db
