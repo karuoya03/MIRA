@@ -270,6 +270,19 @@ body{
       </div>
       <div class="s-card"><div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-pills"></i> My Medications</div><button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fas fa-plus"></i> Add New</button></div><div class="s-card-body"><div class="med-grid" id="medGrid"></div><div class="empty-state hidden" id="noMeds"><i class="fas fa-prescription-bottle"></i><h3 style="font-size:1rem;margin-top:8px;color:var(--g-dark)">No medications yet</h3><p>Click <strong>Add New</strong> to set up your first medication reminder.</p></div></div></div>
     </div>
+
+<!-- Add this inside <div id="view-overview"> after the stats-row or after med-grid -->
+<div class="s-card" style="margin-top: 20px;">
+  <div class="s-card-hdr">
+    <div class="s-card-title"><i class="fas fa-download"></i> Export My Data</div>
+  </div>
+  <div class="s-card-body">
+    <button class="btn btn-primary" onclick="exportFullData()"><i class="fas fa-file-csv"></i> Download All Records (CSV)</button>
+    <button class="btn btn-secondary" onclick="exportMedicationsOnly()"><i class="fas fa-capsules"></i> Medications Only</button>
+    <button class="btn btn-secondary" onclick="exportHistoryOnly()"><i class="fas fa-history"></i> Dose History Only</button>
+  </div>
+</div>
+
     <div id="view-track" class="hidden"><div class="page-hdr"><div class="page-title">Log Today's Intake</div><div class="page-sub">Mark each medication dose as taken or missed.</div></div><div class="s-card"><div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-check-circle"></i> Today's Schedule</div></div><div class="s-card-body" id="trackBody"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading…</p></div></div></div></div>
     <div id="view-history" class="hidden"><div class="page-hdr"><div class="page-title">Dose History</div><div class="page-sub">Your last 100 recorded doses.</div></div><div class="s-card"><div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-history"></i> Dose Log</div></div><div class="s-card-body" style="padding:0"><table class="h-table" id="histTable"><thead><tr><th>Medication</th><th>Dosage</th><th>Date</th><th>Time</th><th>Status</th></tr></thead><tbody id="histBody"></tbody></table><div class="empty-state hidden" id="histEmpty"><i class="fas fa-history"></i><p>No history recorded yet.</p></div></div></div></div>
 
@@ -400,6 +413,90 @@ function go(url) { document.body.style.transition = 'opacity .22s ease'; documen
 function logout() { localStorage.removeItem('user'); go('index.html'); }
 function toast(msg, type = 'info') { const wrap = document.getElementById('toastWrap'); const el = document.createElement('div'); el.className = `toast ${type}`; const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' }; el.innerHTML = `<i class="fas ${icons[type] || 'fa-info-circle'}"></i> ${x(msg)}`; wrap.appendChild(el); setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3500); }
 
+async function exportFullData() {
+    try {
+        const user = USER;
+        const medsRes = await api(`/api/medications/${user.id}`);
+        const histRes = await api(`/api/medication-history/${user.id}`);
+        const medications = medsRes.medications || [];
+        const history = histRes.history || [];
+
+        let csvRows = [
+            ['=== PROFILE ==='],
+            ['Field', 'Value'],
+            ['Name', `${user.firstName} ${user.lastName}`],
+            ['Email', user.email],
+            ['Phone', user.phone],
+            ['Member Since', new Date().toLocaleDateString()],
+            [],
+            ['=== MEDICATIONS ==='],
+            ['ID', 'Name', 'Dosage', 'Frequency', 'Schedule (Times)', 'Start Date', 'End Date', 'Notes', 'Active']
+        ];
+        medications.forEach(m => {
+            let schedule = m.schedule;
+            if (typeof schedule === 'string') schedule = JSON.parse(schedule);
+            csvRows.push([
+                m.id, m.name, m.dosage, m.frequency,
+                (schedule || []).join(', '),
+                m.start_date, m.end_date || '', m.notes || '',
+                m.is_active ? 'Yes' : 'No'
+            ]);
+        });
+        csvRows.push([], ['=== DOSE HISTORY ===']);
+        csvRows.push(['Date', 'Time', 'Medication', 'Dosage', 'Status']);
+        history.forEach(h => {
+            const dt = new Date(h.scheduled_time);
+            csvRows.push([
+                dt.toLocaleDateString(), dt.toLocaleTimeString(),
+                h.medication_name, h.dosage, h.status
+            ]);
+        });
+
+        const csv = csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+        downloadCSV(csv, `mira_full_export_${user.id}.csv`);
+        toast('Full export generated', 'success');
+    } catch (err) {
+        toast('Export failed: ' + err.message, 'error');
+    }
+}
+
+function exportMedicationsOnly() {
+    const meds = MEDS;
+    if (!meds.length) { toast('No medications to export', 'info'); return; }
+    const rows = [['Name', 'Dosage', 'Frequency', 'Schedule', 'Start Date', 'End Date', 'Notes']];
+    meds.forEach(m => {
+        let schedule = m.schedule;
+        if (typeof schedule === 'string') schedule = JSON.parse(schedule);
+        rows.push([m.name, m.dosage, m.frequency, schedule.join(', '), m.start_date, m.end_date || '', m.notes || '']);
+    });
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    downloadCSV(csv, `mira_medications_${USER.id}.csv`);
+    toast('Medications exported', 'success');
+}
+
+function exportHistoryOnly() {
+    if (!HIST.length) { toast('No history to export', 'info'); return; }
+    const rows = [['Date', 'Time', 'Medication', 'Dosage', 'Status']];
+    HIST.forEach(h => {
+        const dt = new Date(h.scheduled_time);
+        rows.push([dt.toLocaleDateString(), dt.toLocaleTimeString(), h.medication_name, h.dosage, h.status]);
+    });
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    downloadCSV(csv, `mira_history_${USER.id}.csv`);
+    toast('History exported', 'success');
+}
+
+function downloadCSV(csv, filename) {
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
 
 </script>
 </body>
