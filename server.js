@@ -1,7 +1,8 @@
-// server.js - Mira Backend (PostgreSQL version for Render)
+// server.js - Mira Backend (email OTP only, full Google Sheets sync, admin dashboard)
 require('dotenv').config();
 
 const express = require('express');
+const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -12,181 +13,12 @@ const nodemailer = require('nodemailer');
 const { google } = require('googleapis');
 const cron = require('node-cron');
 const fs = require('fs');
-const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const APP_URL = process.env.APP_URL || null;
 
-// ==================== POSTGRESQL DATABASE ====================
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }, // Required for Render PostgreSQL
-    max: 10,
-    idleTimeoutMillis: 30000,
-});
-
-// Test connection and initialize tables
-pool.connect(async (err, client, release) => {
-    if (err) {
-        console.error('❌ PostgreSQL connection error:', err.stack);
-        process.exit(1);
-    }
-    console.log('✅ PostgreSQL connected');
-    release();
-    await initDB();
-});
-
-// Helper: convert ? placeholders to $1, $2, ...
-function convertPlaceholders(sql, params) {
-    let paramIndex = 1;
-    return sql.replace(/\?/g, () => `$${paramIndex++}`);
-}
-
-// Wrappers that mimic sqlite3’s callback interface (for SELECT, UPDATE, DELETE)
-function dbGet(sql, params, callback) {
-    const transformedSql = convertPlaceholders(sql, params);
-    pool.query(transformedSql, params)
-        .then(res => callback(null, res.rows[0] || null))
-        .catch(err => callback(err, null));
-}
-
-function dbAll(sql, params, callback) {
-    const transformedSql = convertPlaceholders(sql, params);
-    pool.query(transformedSql, params)
-        .then(res => callback(null, res.rows))
-        .catch(err => callback(err, null));
-}
-
-// dbRun is kept for UPDATE/DELETE that don't need the returned ID
-function dbRun(sql, params, callback) {
-    const transformedSql = convertPlaceholders(sql, params);
-    pool.query(transformedSql, params)
-        .then(res => callback(null, { lastID: null, changes: res.rowCount }))
-        .catch(err => callback(err, null));
-}
-
-const db = { get: dbGet, all: dbAll, run: dbRun };
-
-// ==================== TABLE INITIALIZATION ====================
-async function initDB() {
-    const createTables = `
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            first_name TEXT NOT NULL,
-            middle_name TEXT,
-            last_name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            phone TEXT NOT NULL,
-            password TEXT NOT NULL,
-            gender TEXT,
-            date_of_birth DATE,
-            is_admin INTEGER DEFAULT 0,
-            account_type TEXT DEFAULT 'patient',
-            facility_type TEXT,
-            institution_name TEXT,
-            institution_id INTEGER,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE IF NOT EXISTS password_resets (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            token TEXT NOT NULL,
-            expires_at TIMESTAMP NOT NULL,
-            used BOOLEAN DEFAULT FALSE
-        );
-
-        CREATE TABLE IF NOT EXISTS medications (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            name TEXT NOT NULL,
-            dosage TEXT NOT NULL,
-            frequency TEXT NOT NULL,
-            schedule TEXT NOT NULL,
-            start_date DATE NOT NULL,
-            end_date DATE,
-            notes TEXT,
-            is_active BOOLEAN DEFAULT TRUE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE IF NOT EXISTS medication_reminders (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            medication_id INTEGER NOT NULL REFERENCES medications(id) ON DELETE CASCADE,
-            reminder_time TIME NOT NULL,
-            reminder_date DATE NOT NULL,
-            status TEXT DEFAULT 'pending',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE IF NOT EXISTS medication_history (
-            id SERIAL PRIMARY KEY,
-            medication_id INTEGER NOT NULL REFERENCES medications(id) ON DELETE CASCADE,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            taken_at TIMESTAMP,
-            scheduled_time TIMESTAMP NOT NULL,
-            status TEXT NOT NULL,
-            notes TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE IF NOT EXISTS support_tickets (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            subject TEXT NOT NULL,
-            message TEXT NOT NULL,
-            priority TEXT DEFAULT 'medium',
-            status TEXT DEFAULT 'open',
-            reply TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE IF NOT EXISTS sync_history (
-            id SERIAL PRIMARY KEY,
-            sync_type TEXT,
-            records_count INTEGER,
-            status TEXT,
-            details TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE IF NOT EXISTS profile_change_requests (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            field_type TEXT NOT NULL,
-            old_value TEXT,
-            new_value TEXT NOT NULL,
-            otp_code TEXT NOT NULL,
-            expires_at TIMESTAMP NOT NULL,
-            verified BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-    `;
-
-    try {
-        await pool.query(createTables);
-        console.log('✅ PostgreSQL tables ready');
-
-        // Create default admin if not exists
-        const adminCheck = await pool.query('SELECT id FROM users WHERE is_admin = 1 LIMIT 1');
-        if (adminCheck.rows.length === 0) {
-            const hashed = await bcrypt.hash('Admin123!', 12);
-            await pool.query(
-                `INSERT INTO users (first_name, last_name, email, phone, password, is_admin, account_type)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-                ['Admin', 'User', 'admin@mira.com', '+1234567890', hashed, 1, 'institution']
-            );
-            console.log('✅ Default admin created: admin@mira.com / Admin123!');
-        }
-    } catch (err) {
-        console.error('❌ Database initialization error:', err);
-        process.exit(1);
-    }
-}
-
-// ==================== GOOGLE SHEETS (SECRET METHOD) ====================
+// ==================== GOOGLE SHEETS ====================
 const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_ID || '';
 const CREDENTIALS_FILE = process.env.GOOGLE_CREDENTIALS_FILE || 'google-credentials.json';
 
@@ -203,23 +35,7 @@ const SHEETS = {
 
 let sheets = null;
 
-// Priority: use GOOGLE_CREDENTIALS_JSON secret if available; otherwise fallback to file
-if (SPREADSHEET_ID && process.env.GOOGLE_CREDENTIALS_JSON) {
-    try {
-        const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
-        const auth = new google.auth.GoogleAuth({
-            credentials: {
-                client_email: credentials.client_email,
-                private_key: credentials.private_key,
-            },
-            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-        });
-        sheets = google.sheets({ version: 'v4', auth });
-        console.log('✅ Google Sheets configured (from environment secret)');
-    } catch (err) {
-        console.warn('⚠️ Google Sheets setup from secret failed:', err.message);
-    }
-} else if (SPREADSHEET_ID && fs.existsSync(CREDENTIALS_FILE)) {
+if (SPREADSHEET_ID && fs.existsSync(CREDENTIALS_FILE)) {
     try {
         const credentials = JSON.parse(fs.readFileSync(CREDENTIALS_FILE));
         const auth = new google.auth.GoogleAuth({
@@ -230,9 +46,9 @@ if (SPREADSHEET_ID && process.env.GOOGLE_CREDENTIALS_JSON) {
             scopes: ['https://www.googleapis.com/auth/spreadsheets'],
         });
         sheets = google.sheets({ version: 'v4', auth });
-        console.log('✅ Google Sheets configured (from service account file)');
+        console.log('✅ Google Sheets configured (Service Account)');
     } catch (err) {
-        console.warn('⚠️ Google Sheets setup from file failed:', err.message);
+        console.warn('⚠️ Google Sheets setup failed:', err.message);
     }
 } else {
     console.log('📊 Google Sheets not configured – sync disabled');
@@ -300,9 +116,9 @@ async function syncTable(sheetName, query, headers, mapRow, orderBy = '') {
 async function syncUsers() {
     await syncTable(
         SHEETS.USERS,
-        'SELECT id, first_name, middle_name, last_name, email, phone, gender, date_of_birth, created_at, is_admin FROM users',
-        ['User ID', 'First Name', 'Middle Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Date of Birth', 'Created At', 'Is Admin'],
-        row => [row.id, row.first_name, row.middle_name || '', row.last_name, row.email, row.phone, row.gender || '', row.date_of_birth || '', row.created_at, row.is_admin ? 'Yes' : 'No'],
+        'SELECT id, first_name, middle_name, last_name, email, phone, created_at, is_admin FROM users',
+        ['User ID', 'First Name', 'Middle Name', 'Last Name', 'Email', 'Phone', 'Created At', 'Is Admin'],
+        row => [row.id, row.first_name, row.middle_name || '', row.last_name, row.email, row.phone, row.created_at, row.is_admin ? 'Yes' : 'No'],
         'id'
     );
 }
@@ -387,14 +203,14 @@ async function syncMasterTracker() {
                     u.last_name,
                     u.email,
                     u.phone,
-                    (SELECT id FROM medications WHERE user_id = u.id AND is_active = true ORDER BY created_at DESC LIMIT 1) AS medication_id,
-                    (SELECT name FROM medications WHERE user_id = u.id AND is_active = true ORDER BY created_at DESC LIMIT 1) AS med_name,
-                    (SELECT dosage FROM medications WHERE user_id = u.id AND is_active = true ORDER BY created_at DESC LIMIT 1) AS med_dosage,
-                    (SELECT frequency FROM medications WHERE user_id = u.id AND is_active = true ORDER BY created_at DESC LIMIT 1) AS med_frequency,
-                    (SELECT schedule FROM medications WHERE user_id = u.id AND is_active = true ORDER BY created_at DESC LIMIT 1) AS med_schedule,
-                    (SELECT start_date FROM medications WHERE user_id = u.id AND is_active = true ORDER BY created_at DESC LIMIT 1) AS start_date,
-                    (SELECT end_date FROM medications WHERE user_id = u.id AND is_active = true ORDER BY created_at DESC LIMIT 1) AS end_date,
-                    (SELECT notes FROM medications WHERE user_id = u.id AND is_active = true ORDER BY created_at DESC LIMIT 1) AS med_notes,
+                    (SELECT id FROM medications WHERE user_id = u.id AND is_active = 1 ORDER BY created_at DESC LIMIT 1) AS medication_id,
+                    (SELECT name FROM medications WHERE user_id = u.id AND is_active = 1 ORDER BY created_at DESC LIMIT 1) AS med_name,
+                    (SELECT dosage FROM medications WHERE user_id = u.id AND is_active = 1 ORDER BY created_at DESC LIMIT 1) AS med_dosage,
+                    (SELECT frequency FROM medications WHERE user_id = u.id AND is_active = 1 ORDER BY created_at DESC LIMIT 1) AS med_frequency,
+                    (SELECT schedule FROM medications WHERE user_id = u.id AND is_active = 1 ORDER BY created_at DESC LIMIT 1) AS med_schedule,
+                    (SELECT start_date FROM medications WHERE user_id = u.id AND is_active = 1 ORDER BY created_at DESC LIMIT 1) AS start_date,
+                    (SELECT end_date FROM medications WHERE user_id = u.id AND is_active = 1 ORDER BY created_at DESC LIMIT 1) AS end_date,
+                    (SELECT notes FROM medications WHERE user_id = u.id AND is_active = 1 ORDER BY created_at DESC LIMIT 1) AS med_notes,
                     (SELECT id FROM medication_reminders WHERE user_id = u.id AND status = 'pending' ORDER BY reminder_date, reminder_time LIMIT 1) AS reminder_id,
                     (SELECT id FROM medication_history WHERE user_id = u.id ORDER BY scheduled_time DESC LIMIT 1) AS history_id,
                     (SELECT id FROM support_tickets WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) AS ticket_id,
@@ -471,15 +287,17 @@ app.post('/api/sync-sheets', async (req, res) => {
 let transporter = null;
 if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
     transporter = nodemailer.createTransport({
-        service: 'gmail',
         host: 'smtp.gmail.com',
         port: 587,
         secure: false,
-        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-        tls: { rejectUnauthorized: true }
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS
+        },
+        tls: { rejectUnauthorized: false }
     });
     transporter.verify((error) => {
-        if (error) console.warn('⚠️ Email not configured:', error.message);
+        if (error) console.warn('⚠️ Email not ready:', error.message);
         else console.log('✅ Email ready');
     });
 } else {
@@ -504,8 +322,136 @@ async function sendEmail(to, subject, text, html) {
     }
 }
 
+// ==================== DATABASE ====================
+const db = new sqlite3.Database(process.env.DB_PATH || './mira.db', (err) => {
+    if (err) { console.error('DB open error:', err); process.exit(1); }
+    console.log('✅ SQLite connected');
+    initDB();
+});
+
+function initDB() {
+    db.run(`ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0`, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+            console.log('ℹ️ is_admin column already exists or added');
+        }
+    });
+
+    db.run(`CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        first_name TEXT NOT NULL,
+        middle_name TEXT,
+        last_name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        phone TEXT NOT NULL,
+        password TEXT NOT NULL,
+        is_admin INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS password_resets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        token TEXT NOT NULL,
+        expires_at DATETIME NOT NULL,
+        used BOOLEAN DEFAULT 0,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS medications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        dosage TEXT NOT NULL,
+        frequency TEXT NOT NULL,
+        schedule TEXT NOT NULL,
+        start_date DATE NOT NULL,
+        end_date DATE,
+        notes TEXT,
+        is_active BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS medication_reminders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        medication_id INTEGER NOT NULL,
+        reminder_time TIME NOT NULL,
+        reminder_date DATE NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (medication_id) REFERENCES medications(id)
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS medication_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        medication_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        taken_at DATETIME,
+        scheduled_time DATETIME NOT NULL,
+        status TEXT NOT NULL,
+        notes TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (medication_id) REFERENCES medications(id),
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS support_tickets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        subject TEXT NOT NULL,
+        message TEXT NOT NULL,
+        priority TEXT DEFAULT 'medium',
+        status TEXT DEFAULT 'open',
+        reply TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS sync_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sync_type TEXT,
+        records_count INTEGER,
+        status TEXT,
+        details TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS profile_change_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        field_type TEXT NOT NULL,
+        old_value TEXT,
+        new_value TEXT NOT NULL,
+        otp_code TEXT NOT NULL,
+        expires_at DATETIME NOT NULL,
+        verified BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )`);
+
+    // Create default admin if no admin exists
+    db.get('SELECT id FROM users WHERE is_admin = 1 LIMIT 1', async (err, row) => {
+        if (!row) {
+            const adminEmail = 'admin@mira.com';
+            const adminPassword = 'Admin123!';
+            const hashed = await bcrypt.hash(adminPassword, 12);
+            db.run(
+                `INSERT INTO users (first_name, last_name, email, phone, password, is_admin)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                ['Admin', 'User', adminEmail, '+1234567890', hashed, 1],
+                function(err) {
+                    if (!err) console.log('✅ Default admin created: admin@mira.com / Admin123!');
+                    else console.warn('⚠️ Could not create default admin:', err.message);
+                }
+            );
+        }
+    });
+}
+
 // ==================== MIDDLEWARE ====================
-app.use(cors({ origin: '*', credentials: true }));
+app.use(cors({ origin: true, credentials: true }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
@@ -543,7 +489,7 @@ app.use('/api/admin/login', authLimiter);
 
 // ==================== AUTHENTICATION (user) ====================
 app.post('/api/register', async (req, res) => {
-    const { firstName, middleName, lastName, email, phone, password, gender, dateOfBirth, isInstitution, institutionName, facilityType } = req.body;
+    const { firstName, middleName, lastName, email, phone, password } = req.body;
     if (!firstName || !lastName || !email || !phone || !password) {
         return res.status(400).json({ success: false, message: 'All fields except middle name are required' });
     }
@@ -561,22 +507,18 @@ app.post('/api/register', async (req, res) => {
             return res.status(409).json({ success: false, message: 'Email already registered' });
         }
         const hash = await bcrypt.hash(password, 12);
-        const acctType = isInstitution ? 'institution' : 'patient';
-        const adminFlag = isInstitution ? 1 : 0;
-
-        const query = `
-            INSERT INTO users (first_name, middle_name, last_name, email, phone, password, gender, date_of_birth, is_admin, account_type, facility_type, institution_name)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-            RETURNING id
-        `;
-        const values = [firstName, middleName || '', lastName, email, phone, hash, gender || '', dateOfBirth || null, adminFlag, acctType, facilityType || null, institutionName || null];
-        const result = await pool.query(query, values);
-        const newUserId = result.rows[0].id;
-
+        const result = await new Promise((resolve, reject) => {
+            db.run(
+                `INSERT INTO users (first_name, middle_name, last_name, email, phone, password)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [firstName, middleName || '', lastName, email, phone, hash],
+                function(err) { err ? reject(err) : resolve(this); }
+            );
+        });
         res.status(201).json({
             success: true,
-            message: isInstitution ? 'Institution account created successfully!' : 'Account created successfully!',
-            user: { id: newUserId, firstName, lastName, email, accountType: acctType }
+            message: 'Account created successfully!',
+            user: { id: result.lastID, firstName, lastName, email }
         });
     } catch (err) {
         console.error(err);
@@ -609,9 +551,7 @@ app.post('/api/login', async (req, res) => {
                 firstName: user.first_name,
                 lastName: user.last_name,
                 email: user.email,
-                phone: user.phone,
-                gender: user.gender,
-                dateOfBirth: user.date_of_birth
+                phone: user.phone
             }
         });
     } catch (err) {
@@ -623,7 +563,7 @@ app.post('/api/login', async (req, res) => {
 // ==================== USER PROFILE ====================
 app.get('/api/user/:userId', (req, res) => {
     const userId = req.params.userId;
-    db.get('SELECT id, first_name, middle_name, last_name, email, phone, gender, date_of_birth, created_at FROM users WHERE id = ?', [userId], (err, user) => {
+    db.get('SELECT id, first_name, middle_name, last_name, email, phone, created_at FROM users WHERE id = ?', [userId], (err, user) => {
         if (err || !user) return res.status(404).json({ success: false, message: 'User not found' });
         res.json({ success: true, user });
     });
@@ -644,14 +584,14 @@ app.post('/api/send-otp', async (req, res) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-        const query = `
-            INSERT INTO profile_change_requests (user_id, field_type, old_value, new_value, otp_code, expires_at)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id
-        `;
-        const values = [userId, fieldType, user[fieldType === 'email' ? 'email' : fieldType === 'phone' ? 'phone' : 'password'], newValue, otp, expiresAt];
-        const result = await pool.query(query, values);
-        const requestId = result.rows[0].id;
+        const result = await new Promise((resolve, reject) => {
+            db.run(
+                `INSERT INTO profile_change_requests (user_id, field_type, old_value, new_value, otp_code, expires_at)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [userId, fieldType, user[fieldType === 'email' ? 'email' : fieldType === 'phone' ? 'phone' : 'password'], newValue, otp, expiresAt],
+                function(err) { err ? reject(err) : resolve(this); }
+            );
+        });
 
         const emailSent = await sendEmail(
             user.email,
@@ -661,11 +601,11 @@ app.post('/api/send-otp', async (req, res) => {
         );
 
         if (!emailSent.success) {
-            await pool.query('DELETE FROM profile_change_requests WHERE id = $1', [requestId]);
+            await new Promise((resolve) => db.run('DELETE FROM profile_change_requests WHERE id = ?', [result.lastID], () => resolve()));
             return res.status(500).json({ success: false, message: 'Failed to send OTP email' });
         }
 
-        res.json({ success: true, message: `OTP sent to your email`, requestId });
+        res.json({ success: true, message: `OTP sent to your email`, requestId: result.lastID });
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false, message: 'Failed to send OTP' });
@@ -680,7 +620,7 @@ app.post('/api/verify-and-update', async (req, res) => {
     try {
         const request = await new Promise((resolve, reject) => {
             db.get(
-                `SELECT * FROM profile_change_requests WHERE id = ? AND user_id = ? AND verified = false AND expires_at > NOW()`,
+                `SELECT * FROM profile_change_requests WHERE id = ? AND user_id = ? AND verified = 0 AND expires_at > datetime('now')`,
                 [requestId, userId],
                 (err, row) => err ? reject(err) : resolve(row)
             );
@@ -691,21 +631,25 @@ app.post('/api/verify-and-update', async (req, res) => {
         let updateQuery = '';
         let params = [];
         if (request.field_type === 'email') {
-            updateQuery = 'UPDATE users SET email = $1 WHERE id = $2';
+            updateQuery = 'UPDATE users SET email = ? WHERE id = ?';
             params = [request.new_value, userId];
         } else if (request.field_type === 'phone') {
-            updateQuery = 'UPDATE users SET phone = $1 WHERE id = $2';
+            updateQuery = 'UPDATE users SET phone = ? WHERE id = ?';
             params = [request.new_value, userId];
         } else if (request.field_type === 'password') {
             const hashed = await bcrypt.hash(request.new_value, 12);
-            updateQuery = 'UPDATE users SET password = $1 WHERE id = $2';
+            updateQuery = 'UPDATE users SET password = ? WHERE id = ?';
             params = [hashed, userId];
         } else {
             return res.status(400).json({ success: false, message: 'Invalid field type' });
         }
 
-        await pool.query(updateQuery, params);
-        await pool.query('UPDATE profile_change_requests SET verified = true WHERE id = $1', [requestId]);
+        await new Promise((resolve, reject) => {
+            db.run(updateQuery, params, err => err ? reject(err) : resolve());
+        });
+        await new Promise((resolve, reject) => {
+            db.run('UPDATE profile_change_requests SET verified = 1 WHERE id = ?', [requestId], err => err ? reject(err) : resolve());
+        });
 
         const updatedUser = await new Promise((resolve, reject) => {
             db.get('SELECT id, first_name, last_name, email, phone FROM users WHERE id = ?', [userId], (err, row) => err ? reject(err) : resolve(row));
@@ -731,14 +675,14 @@ app.post('/api/send-delete-otp', async (req, res) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-        const query = `
-            INSERT INTO profile_change_requests (user_id, field_type, old_value, new_value, otp_code, expires_at)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id
-        `;
-        const values = [userId, 'delete_account', user.email, 'DELETE', otp, expiresAt];
-        const result = await pool.query(query, values);
-        const requestId = result.rows[0].id;
+        const result = await new Promise((resolve, reject) => {
+            db.run(
+                `INSERT INTO profile_change_requests (user_id, field_type, old_value, new_value, otp_code, expires_at)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [userId, 'delete_account', user.email, 'DELETE', otp, expiresAt],
+                function(err) { err ? reject(err) : resolve(this); }
+            );
+        });
 
         const emailSent = await sendEmail(
             user.email,
@@ -748,11 +692,11 @@ app.post('/api/send-delete-otp', async (req, res) => {
         );
 
         if (!emailSent.success) {
-            await pool.query('DELETE FROM profile_change_requests WHERE id = $1', [requestId]);
+            await new Promise((resolve) => db.run('DELETE FROM profile_change_requests WHERE id = ?', [result.lastID], () => resolve()));
             return res.status(500).json({ success: false, message: 'Failed to send OTP email' });
         }
 
-        res.json({ success: true, message: 'OTP sent to your email', requestId });
+        res.json({ success: true, message: 'OTP sent to your email', requestId: result.lastID });
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false, message: 'Server error' });
@@ -768,7 +712,7 @@ app.post('/api/confirm-delete-account', async (req, res) => {
     try {
         const request = await new Promise((resolve, reject) => {
             db.get(
-                `SELECT * FROM profile_change_requests WHERE id = ? AND user_id = ? AND field_type = 'delete_account' AND verified = false AND expires_at > NOW()`,
+                `SELECT * FROM profile_change_requests WHERE id = ? AND user_id = ? AND field_type = 'delete_account' AND verified = 0 AND expires_at > datetime('now')`,
                 [requestId, userId],
                 (err, row) => err ? reject(err) : resolve(row)
             );
@@ -776,16 +720,32 @@ app.post('/api/confirm-delete-account', async (req, res) => {
         if (!request) return res.status(400).json({ success: false, message: 'Invalid or expired OTP request' });
         if (request.otp_code !== otp) return res.status(400).json({ success: false, message: 'Invalid OTP' });
 
-        await pool.query('UPDATE profile_change_requests SET verified = true WHERE id = $1', [requestId]);
+        await new Promise((resolve, reject) => {
+            db.run('UPDATE profile_change_requests SET verified = 1 WHERE id = ?', [requestId], (err) => err ? reject(err) : resolve());
+        });
 
         // Delete all user data
-        await pool.query('DELETE FROM medication_history WHERE user_id = $1', [userId]);
-        await pool.query('DELETE FROM medication_reminders WHERE user_id = $1', [userId]);
-        await pool.query('DELETE FROM medications WHERE user_id = $1', [userId]);
-        await pool.query('DELETE FROM support_tickets WHERE user_id = $1', [userId]);
-        await pool.query('DELETE FROM profile_change_requests WHERE user_id = $1', [userId]);
-        await pool.query('DELETE FROM password_resets WHERE user_id = $1', [userId]);
-        await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM medication_history WHERE user_id = ?', [userId], (err) => err ? reject(err) : resolve());
+        });
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM medication_reminders WHERE user_id = ?', [userId], (err) => err ? reject(err) : resolve());
+        });
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM medications WHERE user_id = ?', [userId], (err) => err ? reject(err) : resolve());
+        });
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM support_tickets WHERE user_id = ?', [userId], (err) => err ? reject(err) : resolve());
+        });
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM profile_change_requests WHERE user_id = ?', [userId], (err) => err ? reject(err) : resolve());
+        });
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM password_resets WHERE user_id = ?', [userId], (err) => err ? reject(err) : resolve());
+        });
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM users WHERE id = ?', [userId], (err) => err ? reject(err) : resolve());
+        });
 
         if (sheets) fullSync();
 
@@ -798,40 +758,36 @@ app.post('/api/confirm-delete-account', async (req, res) => {
 
 // ==================== MEDICATION ENDPOINTS ====================
 app.get('/api/medications/:userId', (req, res) => {
-    db.all('SELECT * FROM medications WHERE user_id = ? AND is_active = true ORDER BY created_at DESC', [req.params.userId], (err, rows) => {
+    db.all('SELECT * FROM medications WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC', [req.params.userId], (err, rows) => {
         if (err) return res.status(500).json({ success: false });
         const medications = rows.map(r => ({ ...r, schedule: JSON.parse(r.schedule || '[]') }));
         res.json({ success: true, medications });
     });
 });
 
-app.post('/api/medications', async (req, res) => {
+app.post('/api/medications', (req, res) => {
     const { userId, name, dosage, frequency, schedule, startDate, endDate, notes } = req.body;
     if (!userId || !name || !dosage || !frequency || !schedule || !startDate) {
         return res.status(400).json({ success: false, message: 'Missing fields' });
     }
-    const query = `
-        INSERT INTO medications (user_id, name, dosage, frequency, schedule, start_date, end_date, notes)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        RETURNING id
-    `;
-    const values = [userId, name, dosage, frequency, JSON.stringify(schedule), startDate, endDate || null, notes || ''];
-    try {
-        const result = await pool.query(query, values);
-        if (sheets) fullSync();
-        res.status(201).json({ success: true, medicationId: result.rows[0].id });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: 'DB error' });
-    }
+    db.run(
+        `INSERT INTO medications (user_id, name, dosage, frequency, schedule, start_date, end_date, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, name, dosage, frequency, JSON.stringify(schedule), startDate, endDate || null, notes || ''],
+        function(err) {
+            if (err) return res.status(500).json({ success: false, message: 'DB error' });
+            if (sheets) fullSync();
+            res.status(201).json({ success: true, medicationId: this.lastID });
+        }
+    );
 });
 
 app.put('/api/medications/:medicationId', (req, res) => {
     const medId = req.params.medicationId;
     const { userId, name, dosage, frequency, schedule, startDate, endDate, notes } = req.body;
     db.run(
-        `UPDATE medications SET name=$1, dosage=$2, frequency=$3, schedule=$4, start_date=$5, end_date=$6, notes=$7
-         WHERE id=$8 AND user_id=$9`,
+        `UPDATE medications SET name=?, dosage=?, frequency=?, schedule=?, start_date=?, end_date=?, notes=?
+         WHERE id=? AND user_id=?`,
         [name, dosage, frequency, JSON.stringify(schedule), startDate, endDate || null, notes || '', medId, userId],
         function(err) {
             if (err) return res.status(500).json({ success: false, message: 'Update failed' });
@@ -844,7 +800,7 @@ app.put('/api/medications/:medicationId', (req, res) => {
 app.delete('/api/medications/:medicationId', (req, res) => {
     const medId = req.params.medicationId;
     const { userId } = req.body;
-    db.run('UPDATE medications SET is_active = false WHERE id = $1 AND user_id = $2', [medId, userId], function(err) {
+    db.run('UPDATE medications SET is_active = 0 WHERE id = ? AND user_id = ?', [medId, userId], function(err) {
         if (err) return res.status(500).json({ success: false, message: 'Delete failed' });
         if (sheets) fullSync();
         res.json({ success: true });
@@ -861,7 +817,7 @@ app.post('/api/medication-history', (req, res) => {
     const takenAt = status === 'taken' ? scheduledTime : null;
     db.run(
         `INSERT INTO medication_history (medication_id, user_id, taken_at, scheduled_time, status)
-         VALUES ($1, $2, $3, $4, $5)`,
+         VALUES (?, ?, ?, ?, ?)`,
         [medicationId, userId, takenAt, scheduledTime, status],
         function(err) {
             if (err) return res.status(500).json({ success: false, message: 'DB error' });
@@ -876,7 +832,7 @@ app.get('/api/medication-history/:userId', (req, res) => {
         `SELECT mh.*, m.name as medication_name, m.dosage
          FROM medication_history mh
          JOIN medications m ON mh.medication_id = m.id
-         WHERE mh.user_id = $1
+         WHERE mh.user_id = ?
          ORDER BY mh.scheduled_time DESC LIMIT 100`,
         [req.params.userId],
         (err, rows) => {
@@ -887,25 +843,20 @@ app.get('/api/medication-history/:userId', (req, res) => {
 });
 
 // ==================== SUPPORT TICKETS ====================
-app.post('/api/support-ticket', async (req, res) => {
+app.post('/api/support-ticket', (req, res) => {
     const { userId, subject, message, priority } = req.body;
     if (!userId || !subject || !message) {
         return res.status(400).json({ success: false, message: 'Missing fields' });
     }
-    const query = `
-        INSERT INTO support_tickets (user_id, subject, message, priority)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id
-    `;
-    const values = [userId, subject, message, priority || 'medium'];
-    try {
-        const result = await pool.query(query, values);
-        if (sheets) fullSync();
-        res.json({ success: true, ticketId: result.rows[0].id });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: 'DB error' });
-    }
+    db.run(
+        `INSERT INTO support_tickets (user_id, subject, message, priority) VALUES (?, ?, ?, ?)`,
+        [userId, subject, message, priority || 'medium'],
+        function(err) {
+            if (err) return res.status(500).json({ success: false, message: 'DB error' });
+            if (sheets) fullSync();
+            res.json({ success: true, ticketId: this.lastID });
+        }
+    );
 });
 
 // ==================== PASSWORD RESET ====================
@@ -919,12 +870,16 @@ app.post('/api/forgot-password', async (req, res) => {
         if (!user) {
             return res.json({ success: true, message: 'If an account exists, a reset link has been sent.' });
         }
-        await pool.query('DELETE FROM password_resets WHERE user_id = $1', [user.id]);
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM password_resets WHERE user_id = ?', [user.id], err => err ? reject(err) : resolve());
+        });
         const rawToken = crypto.randomBytes(32).toString('hex');
         const hashedToken = await bcrypt.hash(rawToken, 10);
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-        await pool.query('INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, $3)', [user.id, hashedToken, expiresAt]);
-
+        await new Promise((resolve, reject) => {
+            db.run('INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)',
+                [user.id, hashedToken, expiresAt], err => err ? reject(err) : resolve());
+        });
         let baseUrl = APP_URL;
         if (!baseUrl) {
             const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
@@ -952,7 +907,7 @@ app.get('/api/reset-password/verify/:token', async (req, res) => {
     try {
         const row = await new Promise((resolve, reject) => {
             db.get(
-                `SELECT * FROM password_resets WHERE user_id = $1 AND used = false AND expires_at > NOW()`,
+                `SELECT * FROM password_resets WHERE user_id = ? AND used = 0 AND expires_at > datetime('now')`,
                 [uid],
                 (err, row) => err ? reject(err) : resolve(row)
             );
@@ -975,7 +930,7 @@ app.post('/api/reset-password/:token', async (req, res) => {
     try {
         const row = await new Promise((resolve, reject) => {
             db.get(
-                `SELECT * FROM password_resets WHERE user_id = $1 AND used = false AND expires_at > NOW()`,
+                `SELECT * FROM password_resets WHERE user_id = ? AND used = 0 AND expires_at > datetime('now')`,
                 [uid],
                 (err, row) => err ? reject(err) : resolve(row)
             );
@@ -984,8 +939,12 @@ app.post('/api/reset-password/:token', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid or expired link' });
         }
         const hash = await bcrypt.hash(password, 12);
-        await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hash, uid]);
-        await pool.query('UPDATE password_resets SET used = true WHERE id = $1', [row.id]);
+        await new Promise((resolve, reject) => {
+            db.run('UPDATE users SET password = ? WHERE id = ?', [hash, uid], err => err ? reject(err) : resolve());
+        });
+        await new Promise((resolve, reject) => {
+            db.run('UPDATE password_resets SET used = 1 WHERE id = ?', [row.id], err => err ? reject(err) : resolve());
+        });
         res.json({ success: true, message: 'Password reset successfully' });
     } catch (err) {
         console.error(err);
@@ -1007,7 +966,7 @@ app.post('/api/admin/login', async (req, res) => {
         if (user.is_admin !== 1) {
             return res.status(403).json({ success: false, message: 'Not an admin account' });
         }
-        res.json({ success: true, user: { id: user.id, name: user.institution_name || `${user.first_name} ${user.last_name}`, email: user.email } });
+        res.json({ success: true, user: { id: user.id, name: `${user.first_name} ${user.last_name}`, email: user.email } });
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false, message: 'Server error' });
@@ -1017,7 +976,7 @@ app.post('/api/admin/login', async (req, res) => {
 app.get('/api/admin/users', isAdmin, async (req, res) => {
     try {
         const users = await new Promise((resolve, reject) => {
-            db.all('SELECT id, first_name, middle_name, last_name, email, phone, gender, date_of_birth, created_at, is_admin FROM users ORDER BY id', [], (err, rows) => err ? reject(err) : resolve(rows));
+            db.all('SELECT id, first_name, middle_name, last_name, email, phone, created_at, is_admin FROM users ORDER BY id', [], (err, rows) => err ? reject(err) : resolve(rows));
         });
         res.json({ success: true, users });
     } catch (err) {
@@ -1028,13 +987,27 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
 app.delete('/api/admin/users/:userId', isAdmin, async (req, res) => {
     const userId = req.params.userId;
     try {
-        await pool.query('DELETE FROM medication_history WHERE user_id = $1', [userId]);
-        await pool.query('DELETE FROM medication_reminders WHERE user_id = $1', [userId]);
-        await pool.query('DELETE FROM medications WHERE user_id = $1', [userId]);
-        await pool.query('DELETE FROM support_tickets WHERE user_id = $1', [userId]);
-        await pool.query('DELETE FROM profile_change_requests WHERE user_id = $1', [userId]);
-        await pool.query('DELETE FROM password_resets WHERE user_id = $1', [userId]);
-        await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM medication_history WHERE user_id = ?', [userId], (err) => err ? reject(err) : resolve());
+        });
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM medication_reminders WHERE user_id = ?', [userId], (err) => err ? reject(err) : resolve());
+        });
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM medications WHERE user_id = ?', [userId], (err) => err ? reject(err) : resolve());
+        });
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM support_tickets WHERE user_id = ?', [userId], (err) => err ? reject(err) : resolve());
+        });
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM profile_change_requests WHERE user_id = ?', [userId], (err) => err ? reject(err) : resolve());
+        });
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM password_resets WHERE user_id = ?', [userId], (err) => err ? reject(err) : resolve());
+        });
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM users WHERE id = ?', [userId], (err) => err ? reject(err) : resolve());
+        });
         if (sheets) fullSync();
         res.json({ success: true, message: 'User deleted successfully' });
     } catch (err) {
@@ -1049,7 +1022,7 @@ app.get('/api/admin/medications', isAdmin, async (req, res) => {
                 SELECT m.*, u.first_name, u.last_name, u.email 
                 FROM medications m 
                 JOIN users u ON m.user_id = u.id 
-                WHERE m.is_active = true 
+                WHERE m.is_active = 1 
                 ORDER BY m.created_at DESC
             `, [], (err, rows) => err ? reject(err) : resolve(rows));
         });
@@ -1059,25 +1032,24 @@ app.get('/api/admin/medications', isAdmin, async (req, res) => {
     }
 });
 
-// Admin prescribes medication for a patient
 app.post('/api/admin/medications', isAdmin, async (req, res) => {
     const { userId, name, dosage, frequency, schedule, startDate, endDate, notes } = req.body;
     if (!userId || !name || !dosage || !frequency || !schedule || !startDate) {
         return res.status(400).json({ success: false, message: 'Missing fields' });
     }
-    const query = `
-        INSERT INTO medications (user_id, name, dosage, frequency, schedule, start_date, end_date, notes)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        RETURNING id
-    `;
-    const values = [userId, name, dosage, frequency, JSON.stringify(schedule), startDate, endDate || null, notes || ''];
     try {
-        const result = await pool.query(query, values);
+        const result = await new Promise((resolve, reject) => {
+            db.run(
+                `INSERT INTO medications (user_id, name, dosage, frequency, schedule, start_date, end_date, notes)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [userId, name, dosage, frequency, JSON.stringify(schedule), startDate, endDate || null, notes || ''],
+                function(err) { err ? reject(err) : resolve(this); }
+            );
+        });
         if (sheets) fullSync();
-        res.status(201).json({ success: true, medicationId: result.rows[0].id });
+        res.json({ success: true, medicationId: result.lastID });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: 'DB error' });
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 
@@ -1123,7 +1095,9 @@ app.post('/api/admin/tickets/:ticketId/reply', isAdmin, async (req, res) => {
             db.get('SELECT user_id, subject FROM support_tickets WHERE id = ?', [ticketId], (err, row) => err ? reject(err) : resolve(row));
         });
         if (!ticket) return res.status(404).json({ success: false, message: 'Ticket not found' });
-        await pool.query('UPDATE support_tickets SET reply = $1, status = $2 WHERE id = $3', [reply, status || 'closed', ticketId]);
+        await new Promise((resolve, reject) => {
+            db.run('UPDATE support_tickets SET reply = ?, status = ? WHERE id = ?', [reply, status || 'closed', ticketId], (err) => err ? reject(err) : resolve());
+        });
         const user = await new Promise((resolve, reject) => {
             db.get('SELECT email, first_name FROM users WHERE id = ?', [ticket.user_id], (err, row) => err ? reject(err) : resolve(row));
         });
@@ -1144,22 +1118,22 @@ app.post('/api/admin/tickets/:ticketId/reply', isAdmin, async (req, res) => {
 app.get('/api/admin/stats', isAdmin, async (req, res) => {
     try {
         const totalUsers = await new Promise((resolve, reject) => {
-            db.get('SELECT COUNT(*) as count FROM users WHERE is_admin = 0', [], (err, row) => err ? reject(err) : resolve(row.count));
+            db.get('SELECT COUNT(*) as count FROM users', [], (err, row) => err ? reject(err) : resolve(row.count));
         });
         const totalMeds = await new Promise((resolve, reject) => {
-            db.get('SELECT COUNT(*) as count FROM medications WHERE is_active = true', [], (err, row) => err ? reject(err) : resolve(row.count));
+            db.get('SELECT COUNT(*) as count FROM medications WHERE is_active = 1', [], (err, row) => err ? reject(err) : resolve(row.count));
         });
         const totalTickets = await new Promise((resolve, reject) => {
             db.get('SELECT COUNT(*) as count FROM support_tickets', [], (err, row) => err ? reject(err) : resolve(row.count));
         });
         const openTickets = await new Promise((resolve, reject) => {
-            db.get('SELECT COUNT(*) as count FROM support_tickets WHERE status = \'open\'', [], (err, row) => err ? reject(err) : resolve(row.count));
+            db.get('SELECT COUNT(*) as count FROM support_tickets WHERE status = "open"', [], (err, row) => err ? reject(err) : resolve(row.count));
         });
         const totalHistory = await new Promise((resolve, reject) => {
             db.get('SELECT COUNT(*) as count FROM medication_history', [], (err, row) => err ? reject(err) : resolve(row.count));
         });
         const adherenceRate = await new Promise((resolve, reject) => {
-            db.get('SELECT ROUND(100.0 * SUM(CASE WHEN status = \'taken\' THEN 1 ELSE 0 END) / MAX(COUNT(*),1)) as rate FROM medication_history', [], (err, row) => err ? reject(err) : resolve(row.rate || 0));
+            db.get('SELECT ROUND(100.0 * SUM(CASE WHEN status = "taken" THEN 1 ELSE 0 END) / COUNT(*)) as rate FROM medication_history', [], (err, row) => err ? reject(err) : resolve(row.rate || 0));
         });
         res.json({ success: true, stats: { totalUsers, totalMeds, totalTickets, openTickets, totalHistory, adherenceRate } });
     } catch (err) {
@@ -1188,27 +1162,207 @@ app.post('/api/admin/trigger-sync', isAdmin, async (req, res) => {
     }
 });
 
-// ==================== ADHERENCE REPORT ====================
+// ==================== ADMIN ADHERENCE REPORT ====================
 app.get('/api/admin/adherence-report', isAdmin, async (req, res) => {
     try {
-        const rows = await new Promise((resolve, reject) => {
+        const report = await new Promise((resolve, reject) => {
             db.all(`
-                SELECT u.id, u.first_name, u.last_name, u.email,
+                SELECT 
+                    u.id,
+                    u.first_name,
+                    u.last_name,
+                    u.email,
                     COUNT(mh.id) AS total_doses,
-                    SUM(CASE WHEN mh.status='taken' THEN 1 ELSE 0 END) AS taken_doses,
-                    SUM(CASE WHEN mh.status='missed' THEN 1 ELSE 0 END) AS missed_doses,
-                    ROUND(100.0 * SUM(CASE WHEN mh.status='taken' THEN 1 ELSE 0 END) / MAX(COUNT(mh.id),1)) AS adherence_pct,
-                    0 AS appt_attended,
-                    0 AS appt_missed
+                    SUM(CASE WHEN mh.status = 'taken' THEN 1 ELSE 0 END) AS taken_doses,
+                    SUM(CASE WHEN mh.status = 'missed' THEN 1 ELSE 0 END) AS missed_doses,
+                    ROUND(100.0 * SUM(CASE WHEN mh.status = 'taken' THEN 1 ELSE 0 END) / COUNT(mh.id), 1) AS adherence_pct
                 FROM users u
-                LEFT JOIN medication_history mh ON mh.user_id = u.id
-                WHERE u.is_admin = 0
+                LEFT JOIN medication_history mh ON u.id = mh.user_id
                 GROUP BY u.id
-                ORDER BY adherence_pct ASC
+                HAVING total_doses > 0
+                ORDER BY adherence_pct DESC
             `, [], (err, rows) => err ? reject(err) : resolve(rows));
         });
-        res.json({ success: true, report: rows });
-    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+        res.json({ success: true, report });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ==================== GENERATE TEST DATA (200 USERS + TICKETS) ====================
+app.post('/api/admin/generate-test-data', isAdmin, async (req, res) => {
+    try {
+        // Check if test data already exists
+        const existing = await new Promise((resolve) => {
+            db.get('SELECT id FROM users WHERE email LIKE ? LIMIT 1', ['testuser%'], (err, row) => resolve(row));
+        });
+        if (existing) {
+            return res.status(400).json({ success: false, message: 'Test data already exists. Delete existing test users first.' });
+        }
+
+        const firstNames = ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda', 'William', 'Elizabeth', 'David', 'Susan', 'Joseph', 'Jessica', 'Thomas', 'Sarah', 'Charles', 'Karen', 'Christopher', 'Nancy'];
+        const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin'];
+        const medNames = ['Lisinopril', 'Metformin', 'Amlodipine', 'Simvastatin', 'Omeprazole', 'Levothyroxine', 'Albuterol', 'Gabapentin', 'Hydrochlorothiazide', 'Losartan'];
+        const dosages = ['10mg', '20mg', '500mg', '5mg', '40mg', '100mg', '250mg', '50mg', '25mg', '2.5mg'];
+        const frequencies = ['Once daily', 'Twice daily', 'Three times daily'];
+        const timesOptions = [['08:00'], ['08:00', '20:00'], ['08:00', '14:00', '20:00']];
+        const ticketSubjects = [
+            'Medication reminder not working', 'Missed a dose – how to log?', 'Wrong dosage shown',
+            'Need to change reminder time', 'App not loading', 'Forgot password',
+            'Sync issue with Google Sheets', 'SMS reminder not received', 'Profile update problem',
+            'Duplicate medication entry', 'History missing', 'General inquiry'
+        ];
+        const priorities = ['low', 'medium', 'high'];
+        const ticketStatuses = ['open', 'closed'];
+
+        let userIds = [];
+        let totalMeds = 0;
+        let totalHistory = 0;
+        let totalTickets = 0;
+
+        for (let i = 1; i <= 200; i++) {
+            const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+            const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+            const email = `testuser${i}@example.com`;
+            const phone = `+2547${Math.floor(10000000 + Math.random() * 90000000)}`;
+            const passwordHash = await bcrypt.hash('Test1234', 12);
+
+            const result = await new Promise((resolve, reject) => {
+                db.run(
+                    `INSERT INTO users (first_name, last_name, email, phone, password) VALUES (?, ?, ?, ?, ?)`,
+                    [firstName, lastName, email, phone, passwordHash],
+                    function(err) { err ? reject(err) : resolve(this); }
+                );
+            });
+            const userId = result.lastID;
+            userIds.push(userId);
+
+            // Medications and history
+            const numMeds = 2 + Math.floor(Math.random() * 4);
+            totalMeds += numMeds;
+            for (let m = 0; m < numMeds; m++) {
+                const medName = medNames[Math.floor(Math.random() * medNames.length)];
+                const dosage = dosages[Math.floor(Math.random() * dosages.length)];
+                const frequency = frequencies[Math.floor(Math.random() * frequencies.length)];
+                const times = timesOptions[Math.floor(Math.random() * timesOptions.length)];
+                const startDate = `2025-${Math.floor(1 + Math.random() * 12)}-${Math.floor(1 + Math.random() * 28)}`;
+                const notes = 'Test medication';
+
+                const medResult = await new Promise((resolve, reject) => {
+                    db.run(
+                        `INSERT INTO medications (user_id, name, dosage, frequency, schedule, start_date, notes) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                        [userId, medName, dosage, frequency, JSON.stringify(times), startDate, notes],
+                        function(err) { err ? reject(err) : resolve(this); }
+                    );
+                });
+                const medId = medResult.lastID;
+
+                for (let d = 0; d < 30; d++) {
+                    const date = new Date();
+                    date.setDate(date.getDate() - d);
+                    const dateStr = date.toISOString().slice(0, 10);
+                    for (let t of times) {
+                        const scheduledTime = `${dateStr} ${t}:00`;
+                        const status = Math.random() > 0.2 ? 'taken' : 'missed';
+                        const takenAt = status === 'taken' ? scheduledTime : null;
+                        await new Promise((resolve, reject) => {
+                            db.run(
+                                `INSERT INTO medication_history (medication_id, user_id, taken_at, scheduled_time, status) VALUES (?, ?, ?, ?, ?)`,
+                                [medId, userId, takenAt, scheduledTime, status],
+                                (err) => err ? reject(err) : resolve()
+                            );
+                        });
+                        totalHistory++;
+                    }
+                }
+            }
+
+            // Generate support tickets
+            const numTickets = 1 + Math.floor(Math.random() * 3);
+            for (let t = 0; t < numTickets; t++) {
+                const subject = ticketSubjects[Math.floor(Math.random() * ticketSubjects.length)];
+                const priority = priorities[Math.floor(Math.random() * priorities.length)];
+                const status = ticketStatuses[Math.floor(Math.random() * ticketStatuses.length)];
+                const message = `This is an automated test ticket: ${subject}. Please assist.`;
+                const reply = status === 'closed' ? 'Thank you for contacting support. Your issue has been resolved.' : null;
+                await new Promise((resolve, reject) => {
+                    db.run(
+                        `INSERT INTO support_tickets (user_id, subject, message, priority, status, reply, created_at) VALUES (?, ?, ?, ?, ?, ?, datetime('now', '-' || ? || ' days'))`,
+                        [userId, subject, message, priority, status, reply, Math.floor(Math.random() * 30)],
+                        (err) => err ? reject(err) : resolve()
+                    );
+                });
+                totalTickets++;
+            }
+        }
+
+        await new Promise((resolve, reject) => {
+            db.run(
+                `INSERT INTO sync_history (sync_type, records_count, status, details) VALUES (?, ?, ?, ?)`,
+                ['test_data_generation', userIds.length, 'success', `Generated ${userIds.length} users, ${totalMeds} medications, ${totalHistory} history records, ${totalTickets} support tickets`],
+                (err) => err ? reject(err) : resolve()
+            );
+        });
+
+        if (sheets) await fullSync();
+
+        return res.json({
+            success: true,
+            message: `✅ Generated ${userIds.length} test users with ${totalMeds} medications, ${totalHistory} history entries, and ${totalTickets} support tickets.`
+        });
+    } catch (err) {
+        console.error('Test data generation error:', err);
+        return res.status(500).json({ success: false, message: 'Server error: ' + err.message });
+    }
+});
+
+// ==================== USER DATA EXPORT ====================
+app.get('/api/user/:userId/export', async (req, res) => {
+    const userId = req.params.userId;
+    try {
+        const user = await new Promise((resolve, reject) => {
+            db.get('SELECT id, first_name, last_name, email, phone, created_at FROM users WHERE id = ?', [userId], (err, row) => err ? reject(err) : resolve(row));
+        });
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        const medications = await new Promise((resolve, reject) => {
+            db.all('SELECT * FROM medications WHERE user_id = ? AND is_active = 1', [userId], (err, rows) => err ? reject(err) : resolve(rows));
+        });
+        const history = await new Promise((resolve, reject) => {
+            db.all(`SELECT mh.*, m.name as medication_name, m.dosage FROM medication_history mh JOIN medications m ON mh.medication_id = m.id WHERE mh.user_id = ? ORDER BY mh.scheduled_time DESC`, [userId], (err, rows) => err ? reject(err) : resolve(rows));
+        });
+
+        let csvRows = [
+            ['=== PROFILE ==='],
+            ['Field', 'Value'],
+            ['Name', `${user.first_name} ${user.last_name}`],
+            ['Email', user.email],
+            ['Phone', user.phone],
+            ['Member Since', new Date(user.created_at).toLocaleDateString()],
+            [],
+            ['=== MEDICATIONS ==='],
+            ['ID', 'Name', 'Dosage', 'Frequency', 'Schedule', 'Start Date', 'End Date', 'Notes']
+        ];
+        medications.forEach(m => {
+            let schedule = m.schedule;
+            try { schedule = JSON.parse(schedule).join(', '); } catch { schedule = m.schedule; }
+            csvRows.push([m.id, m.name, m.dosage, m.frequency, schedule, m.start_date, m.end_date || '', m.notes || '']);
+        });
+        csvRows.push([], ['=== DOSE HISTORY ===']);
+        csvRows.push(['Date', 'Time', 'Medication', 'Dosage', 'Status']);
+        history.forEach(h => {
+            const dt = new Date(h.scheduled_time);
+            csvRows.push([dt.toLocaleDateString(), dt.toLocaleTimeString(), h.medication_name, h.dosage, h.status]);
+        });
+
+        const csv = csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename=mira_export_${userId}.csv`);
+        res.send(csv);
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
 });
 
 // ==================== STATIC FILES ====================
@@ -1221,13 +1375,6 @@ app.get('/reset-password.html', (req, res) => res.sendFile(path.join(__dirname, 
 app.get('/profile.html', (req, res) => res.sendFile(path.join(__dirname, 'profile.html')));
 app.get('/admin-login.html', (req, res) => res.sendFile(path.join(__dirname, 'admin-login.html')));
 app.get('/admin-dashboard.html', (req, res) => res.sendFile(path.join(__dirname, 'admin-dashboard.html')));
-
-app.get('/manifest.json', (req, res) => {
-    res.sendFile(path.join(__dirname, 'manifest.json'));
-});
-app.get('/sw.js', (req, res) => {
-    res.sendFile(path.join(__dirname, 'sw.js'));
-});
 
 // ==================== START SERVER ====================
 async function start() {
