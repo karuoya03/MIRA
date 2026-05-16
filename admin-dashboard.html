@@ -6,194 +6,701 @@
 <title>Institution Dashboard – MIRA</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-/* ── RESET & VARS ────────────────────────── */
-*{margin:0;padding:0;box-sizing:border-box;}
-:root{
-  --g-dark:#1f3e1b; --g-main:#2d5a27; --g-mid:#4a8c3a;
-  --g-light:#e8f5e9; --g-pale:#f0f9f0; --g-xpale:#f8fdf7;
-  --white:#fff; --border:#d4e8d0;
-  --text:#1a2e18; --muted:#4a5a47; --subtle:#7a9178;
-  --r:12px; --rs:8px;
-  --sidebar:260px;
+/* ──────────────── RESET & VARIABLES ──────────────── */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
-html,body{height:100%;}
-body{
-  font-family:'Segoe UI',system-ui,sans-serif;
-  background:var(--g-xpale);color:var(--text);
-  display:flex;flex-direction:column;
-  animation:pageIn .3s ease both;
+
+:root {
+  --g-dark: #1f3e1b;
+  --g-main: #2d5a27;
+  --g-mid: #4a8c3a;
+  --g-light: #e8f5e9;
+  --g-pale: #f0f9f0;
+  --g-xpale: #f8fdf7;
+  --white: #fff;
+  --border: #d4e8d0;
+  --text: #1a2e18;
+  --muted: #4a5a47;
+  --subtle: #7a9178;
+  --r: 12px;
+  --rs: 8px;
+  --sidebar: 260px;
 }
-@keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-/* TOP BAR */
-.topbar{height:62px;background:var(--g-dark);color:#fff;
-  display:flex;align-items:center;padding:0 24px;gap:16px;
-  position:sticky;top:0;z-index:800;box-shadow:0 2px 12px rgba(0,0,0,.3);flex-shrink:0;}
-.topbar-logo{display:flex;align-items:center;gap:9px;font-size:1.45rem;font-weight:800;}
-.topbar-logo i{color:#8bc34a;font-size:1.5rem;}
-.topbar-spacer{flex:1;}
-.topbar-user{font-size:.85rem;color:#c8e6c9;display:flex;align-items:center;gap:7px;}
-.topbar-user i{color:#8bc34a;}
-.tbtn{padding:7px 15px;border-radius:var(--rs);font-size:.82rem;font-weight:700;
-  cursor:pointer;border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);
-  color:#fff;transition:background .18s;display:flex;align-items:center;gap:6px;}
-.tbtn:hover{background:rgba(255,255,255,.2);}
-
-/* LAYOUT */
-.layout{display:flex;flex:1;min-height:0;overflow:hidden;}
-
-/* SIDEBAR */
-.sidebar{width:var(--sidebar);background:var(--white);border-right:1px solid var(--border);
-  display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;padding:18px 0 16px;}
-.sb-section{font-size:.68rem;font-weight:800;color:var(--subtle);
-  letter-spacing:.09em;text-transform:uppercase;padding:14px 20px 6px;}
-.nav-btn{display:flex;align-items:center;gap:11px;padding:11px 20px;
-  cursor:pointer;color:var(--muted);font-size:.88rem;font-weight:500;
-  border-left:3px solid transparent;transition:all .15s;
-  background:none;border-top:none;border-right:none;border-bottom:none;
-  width:100%;text-align:left;font-family:inherit;}
-.nav-btn i{width:17px;text-align:center;color:var(--subtle);font-size:.9rem;}
-.nav-btn:hover{background:var(--g-pale);color:var(--g-main);}
-.nav-btn:hover i{color:var(--g-mid);}
-.nav-btn.active{background:var(--g-light);color:var(--g-main);
-  border-left-color:var(--g-main);font-weight:700;}
-.nav-btn.active i{color:var(--g-main);}
-.sb-spacer{flex:1;}
-.sb-logout{margin:10px 14px 0;padding:11px;border-radius:var(--rs);
-  background:var(--g-light);border:none;color:var(--g-main);
-  cursor:pointer;font-size:.88rem;font-weight:700;width:calc(100% - 28px);
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  transition:all .18s;font-family:inherit;}
-.sb-logout:hover{background:var(--g-main);color:var(--white);}
-
-/* MAIN CONTENT */
-.main{flex:1;overflow-y:auto;padding:28px 30px;}
-.page-hdr{margin-bottom:24px;}
-.page-title{font-size:1.55rem;font-weight:800;color:var(--g-dark);letter-spacing:-.01em;}
-.page-sub{font-size:.875rem;color:var(--subtle);margin-top:3px;}
-
-/* STATS CARDS */
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
-.stat-card{background:var(--white);border:1px solid var(--border);
-  border-radius:var(--r);padding:18px 20px;display:flex;align-items:center;gap:14px;}
-.stat-ico{width:46px;height:46px;border-radius:10px;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;font-size:1.15rem;}
-.ico-green{background:var(--g-light);color:var(--g-main);}
-.ico-blue{background:#e3f2fd;color:#1565c0;}
-.ico-amber{background:#fff8e1;color:#e65100;}
-.ico-red{background:#ffebee;color:#c62828;}
-.stat-lbl{font-size:.72rem;color:var(--subtle);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
-.stat-val{font-size:1.65rem;font-weight:800;color:var(--text);line-height:1.1;}
-
-/* SECTION CARD */
-.s-card{background:var(--white);border:1px solid var(--border);
-  border-radius:var(--r);margin-bottom:24px;overflow:hidden;}
-.s-card-hdr{display:flex;align-items:center;justify-content:space-between;
-  padding:16px 20px;border-bottom:1px solid var(--border);background:var(--g-pale);}
-.s-card-title{font-size:.95rem;font-weight:800;color:var(--g-dark);
-  display:flex;align-items:center;gap:9px;}
-.s-card-title i{color:var(--g-mid);}
-.s-card-body{padding:20px;overflow-x:auto;}
-
-/* TABLES */
-.admin-table{width:100%;border-collapse:collapse;font-size:.85rem;}
-.admin-table th{text-align:left;padding:9px 14px;background:var(--g-pale);
-  color:var(--subtle);font-size:.72rem;font-weight:700;text-transform:uppercase;
-  letter-spacing:.05em;border-bottom:1px solid var(--border);}
-.admin-table td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text);}
-.admin-table tr:last-child td{border-bottom:none;}
-.admin-table tr:hover td{background:var(--g-pale);}
-.badge{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:2px 9px;border-radius:20px;font-size:.73rem;font-weight:700;
+html, body {
+  height: 100%;
 }
-.badge-open{background:#ffebee;color:#c62828;}
-.badge-closed{background:var(--g-light);color:var(--g-main);}
-.badge-taken{background:var(--g-light);color:var(--g-main);}
-.badge-missed{background:#ffebee;color:#c62828;}
 
-/* BUTTONS */
-.btn{display:inline-flex;align-items:center;gap:7px;
-  padding:9px 18px;border-radius:var(--rs);font-size:.875rem;
-  font-weight:700;cursor:pointer;border:none;transition:all .18s;font-family:inherit;}
-.btn-primary{background:var(--g-main);color:var(--white);}
-.btn-primary:hover{background:var(--g-dark);transform:translateY(-1px);}
-.btn-secondary{background:var(--white);color:var(--g-main);border:1.5px solid var(--g-main);}
-.btn-secondary:hover{background:var(--g-light);}
-.btn-danger{background:#ffebee;color:#c62828;border:1.5px solid #f9a8a8;}
-.btn-danger:hover{background:#c62828;color:var(--white);}
-.btn-sm{padding:7px 13px;font-size:.8rem;}
-.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important;}
-
-/* UTILITIES */
-.hidden{display:none!important;}
-
-/* MODAL OVERLAY */
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);
-  z-index:1000;align-items:center;justify-content:center;padding:20px;}
-.overlay.open{display:flex;animation:ovIn .2s ease;}
-@keyframes ovIn{from{opacity:0}to{opacity:1}}
-.modal{background:var(--white);border-radius:var(--r);
-  width:100%;max-width:560px;max-height:90vh;overflow-y:auto;
-  box-shadow:0 20px 60px rgba(0,0,0,.2);animation:mdIn .25s ease;}
-@keyframes mdIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
-.modal-hdr{display:flex;align-items:center;justify-content:space-between;
-  padding:18px 22px;border-bottom:1px solid var(--border);
-  position:sticky;top:0;background:var(--white);z-index:2;}
-.modal-title{font-size:1.05rem;font-weight:800;color:var(--g-dark);
-  display:flex;align-items:center;gap:9px;}
-.modal-title i{color:var(--g-mid);}
-.close-x{background:none;border:none;color:var(--subtle);font-size:1.15rem;
-  cursor:pointer;width:30px;height:30px;border-radius:6px;
-  display:flex;align-items:center;justify-content:center;transition:all .15s;}
-.close-x:hover{background:var(--g-light);color:var(--g-main);}
-.modal-body{padding:22px;}
-.modal-ftr{padding:16px 22px;border-top:1px solid var(--border);
-  display:flex;justify-content:flex-end;gap:10px;
-  position:sticky;bottom:0;background:var(--white);}
-
-.fg{margin-bottom:16px;}
-.flbl{display:block;margin-bottom:5px;font-size:.78rem;font-weight:700;
-  color:var(--g-dark);text-transform:uppercase;letter-spacing:.04em;}
-.fi,.fsel,.fta{width:100%;padding:10px 12px;border:1.5px solid var(--border);
-  border-radius:var(--rs);font-size:.9rem;background:var(--white);
-  color:var(--text);transition:border-color .18s,box-shadow .18s;font-family:inherit;}
-.fi:focus,.fsel:focus,.fta:focus{outline:none;border-color:var(--g-main);
-  box-shadow:0 0 0 3px rgba(45,90,39,.12);}
-.fta{resize:vertical;min-height:76px;}
-
-@media(max-width:1100px){.stats-row{grid-template-columns:repeat(2,1fr);}}
-@media(max-width:900px){
-  .layout{flex-direction:column;}
-  .sidebar{width:100%;flex-direction:row;flex-wrap:wrap;padding:8px;
-    border-right:none;border-bottom:1px solid var(--border);height:auto;}
-  .sb-section,.sb-spacer{display:none;}
-  .nav-btn{border-radius:var(--rs);border:none;border-left:none;
-    padding:8px 12px;font-size:.78rem;flex:none;}
-  .sb-logout{margin:0;width:auto;flex:none;}
-  .main{padding:18px;}
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--g-xpale);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  animation: pageIn 0.3s ease both;
 }
-@media(max-width:600px){
-  .stats-row{grid-template-columns:1fr 1fr;}
-  .admin-table th, .admin-table td{white-space:nowrap;}
+
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ──────────────── TOP BAR ──────────────── */
+.topbar {
+  height: 62px;
+  background: var(--g-dark);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 800;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
+.topbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 1.45rem;
+  font-weight: 800;
+}
+
+.topbar-logo i {
+  color: #8bc34a;
+  font-size: 1.5rem;
+}
+
+.topbar-spacer {
+  flex: 1;
+}
+
+.topbar-user {
+  font-size: 0.85rem;
+  color: #c8e6c9;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.topbar-user i {
+  color: #8bc34a;
+}
+
+.tbtn {
+  padding: 7px 15px;
+  border-radius: var(--rs);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  transition: background 0.18s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tbtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ──────────────── LAYOUT & SIDEBAR ──────────────── */
+.layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: var(--sidebar);
+  background: var(--white);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 18px 0 16px;
+}
+
+.sb-section {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--subtle);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 14px 20px 6px;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 20px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+  background: none;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.nav-btn i {
+  width: 17px;
+  text-align: center;
+  color: var(--subtle);
+  font-size: 0.9rem;
+}
+
+.nav-btn:hover {
+  background: var(--g-pale);
+  color: var(--g-main);
+}
+
+.nav-btn:hover i {
+  color: var(--g-mid);
+}
+
+.nav-btn.active {
+  background: var(--g-light);
+  color: var(--g-main);
+  border-left-color: var(--g-main);
+  font-weight: 700;
+}
+
+.nav-btn.active i {
+  color: var(--g-main);
+}
+
+.sb-spacer {
+  flex: 1;
+}
+
+.sb-logout {
+  margin: 10px 14px 0;
+  padding: 11px;
+  border-radius: var(--rs);
+  background: var(--g-light);
+  border: none;
+  color: var(--g-main);
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 700;
+  width: calc(100% - 28px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.18s;
+  font-family: inherit;
+}
+
+.sb-logout:hover {
+  background: var(--g-main);
+  color: var(--white);
+}
+
+/* ──────────────── MAIN CONTENT ──────────────── */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 30px;
+}
+
+.page-hdr {
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: var(--g-dark);
+  letter-spacing: -0.01em;
+}
+
+.page-sub {
+  font-size: 0.875rem;
+  color: var(--subtle);
+  margin-top: 3px;
+}
+
+/* Stats row */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.stat-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.stat-ico {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+}
+
+.ico-green {
+  background: var(--g-light);
+  color: var(--g-main);
+}
+.ico-blue {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+.ico-amber {
+  background: #fff8e1;
+  color: #e65100;
+}
+.ico-red {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.stat-lbl {
+  font-size: 0.72rem;
+  color: var(--subtle);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stat-val {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+/* Adherence rate banner */
+.adherence-banner {
+  background: linear-gradient(135deg, var(--g-dark), var(--g-mid));
+  border-radius: var(--r);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.adherence-rate {
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.adherence-target {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+/* Cards */
+.s-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.s-card-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--g-pale);
+}
+
+.s-card-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--g-dark);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.s-card-title i {
+  color: var(--g-mid);
+}
+
+.s-card-body {
+  padding: 20px;
+  overflow-x: auto;
+}
+
+/* Quick actions buttons */
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* Tables */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.admin-table th {
+  text-align: left;
+  padding: 9px 14px;
+  background: var(--g-pale);
+  color: var(--subtle);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tr:hover td {
+  background: var(--g-pale);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 0.73rem;
+  font-weight: 700;
+}
+
+.badge-open {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.badge-closed {
+  background: var(--g-light);
+  color: var(--g-main);
+}
+
+.badge-taken {
+  background: var(--g-light);
+  color: var(--g-main);
+}
+
+.badge-missed {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: var(--rs);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.18s;
+  font-family: inherit;
+}
+
+.btn-primary {
+  background: var(--g-main);
+  color: var(--white);
+}
+
+.btn-primary:hover {
+  background: var(--g-dark);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: var(--white);
+  color: var(--g-main);
+  border: 1.5px solid var(--g-main);
+}
+
+.btn-secondary:hover {
+  background: var(--g-light);
+}
+
+.btn-danger {
+  background: #ffebee;
+  color: #c62828;
+  border: 1.5px solid #f9a8a8;
+}
+
+.btn-danger:hover {
+  background: #c62828;
+  color: var(--white);
+}
+
+.btn-sm {
+  padding: 7px 13px;
+  font-size: 0.8rem;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Modal */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.overlay.open {
+  display: flex;
+  animation: ovIn 0.2s ease;
+}
+
+@keyframes ovIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  background: var(--white);
+  border-radius: var(--r);
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  animation: mdIn 0.25s ease;
+}
+
+@keyframes mdIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.modal-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--white);
+  z-index: 2;
+}
+
+.modal-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--g-dark);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.modal-title i {
+  color: var(--g-mid);
+}
+
+.close-x {
+  background: none;
+  border: none;
+  color: var(--subtle);
+  font-size: 1.15rem;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.close-x:hover {
+  background: var(--g-light);
+  color: var(--g-main);
+}
+
+.modal-body {
+  padding: 22px;
+}
+
+.modal-ftr {
+  padding: 16px 22px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  position: sticky;
+  bottom: 0;
+  background: var(--white);
+}
+
+.fg {
+  margin-bottom: 16px;
+}
+
+.flbl {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--g-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fi, .fsel, .fta {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--rs);
+  font-size: 0.9rem;
+  background: var(--white);
+  color: var(--text);
+  transition: border-color 0.18s, box-shadow 0.18s;
+  font-family: inherit;
+}
+
+.fi:focus, .fsel:focus, .fta:focus {
+  outline: none;
+  border-color: var(--g-main);
+  box-shadow: 0 0 0 3px rgba(45, 90, 39, 0.12);
+}
+
+.fta {
+  resize: vertical;
+  min-height: 76px;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .layout {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 8px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    height: auto;
+  }
+  .sb-section, .sb-spacer {
+    display: none;
+  }
+  .nav-btn {
+    border-radius: var(--rs);
+    border: none;
+    border-left: none;
+    padding: 8px 12px;
+    font-size: 0.78rem;
+    flex: none;
+  }
+  .sb-logout {
+    margin: 0;
+    width: auto;
+    flex: none;
+  }
+  .main {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 600px) {
+  .stats-row {
+    grid-template-columns: 1fr;
+  }
+  .admin-table th, .admin-table td {
+    white-space: nowrap;
+  }
 }
 </style>
 </head>
 <body>
-
 <header class="topbar">
   <div class="topbar-logo"><i class="fas fa-pills"></i>Mira</div>
   <div class="topbar-spacer"></div>
   <div class="topbar-user"><i class="fas fa-user-shield"></i><span id="adminName">Admin</span></div>
   <button class="tbtn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
 </header>
-
 <div class="layout">
   <aside class="sidebar">
     <div class="sb-section">Institution Panel</div>
     <button class="nav-btn" id="nb-dashboard" onclick="showSection('dashboard')"><i class="fas fa-tachometer-alt"></i> Dashboard</button>
-    <button class="nav-btn" id="nb-users" onclick="showSection('users')"><i class="fas fa-users"></i> Enrolled Patients</button>
     <button class="nav-btn" id="nb-adherence" onclick="showSection('adherence')"><i class="fas fa-chart-bar"></i> Adherence Report</button>
+    <button class="nav-btn" id="nb-users" onclick="showSection('users')"><i class="fas fa-users"></i> Enrolled Patients</button>
     <button class="nav-btn" id="nb-medications" onclick="showSection('medications')"><i class="fas fa-capsules"></i> Medications</button>
     <button class="nav-btn" id="nb-history" onclick="showSection('history')"><i class="fas fa-history"></i> Dose History</button>
     <button class="nav-btn" id="nb-tickets" onclick="showSection('tickets')"><i class="fas fa-ticket-alt"></i> Support Tickets</button>
@@ -201,110 +708,52 @@ body{
     <div class="sb-spacer"></div>
     <button class="sb-logout" id="sidebarLogoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
   </aside>
-
   <main class="main">
-    <!-- DASHBOARD SECTION -->
+    <!-- ================= DASHBOARD SECTION ================= -->
     <div id="section-dashboard">
       <div class="page-hdr">
         <div class="page-title">Institution Dashboard</div>
         <div class="page-sub">Patient cohort overview, adherence monitoring and quick actions</div>
       </div>
+      <!-- Stats row -->
       <div class="stats-row" id="statsContainer"></div>
+      <!-- Overall adherence banner -->
+      <div class="adherence-banner" id="adherenceBanner">
+        <div>
+          <div style="font-size:0.9rem; opacity:0.9;">OVERALL ADHERENCE RATE</div>
+          <div class="adherence-rate" id="overallRate">0%</div>
+        </div>
+        <div class="adherence-target">Target: 85%</div>
+      </div>
+      <!-- Quick actions -->
       <div class="s-card">
-        <div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-chart-line"></i> Quick Actions</div></div>
-        <div class="s-card-body">
+        <div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-bolt"></i> Quick Actions</div></div>
+        <div class="s-card-body quick-actions">
           <button class="btn btn-primary btn-sm" id="triggerSyncBtn"><i class="fas fa-cloud-upload-alt"></i> Trigger Google Sheets Sync</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.location.href='register.html'"><i class="fas fa-user-plus"></i> Register New Patient</button>
+          <button class="btn btn-secondary btn-sm" onclick="exportAdherenceCSV()"><i class="fas fa-download"></i> Export Adherence CSV</button>
         </div>
       </div>
-    </div>
-
-    <!-- USERS SECTION -->
-    <div id="section-users" class="hidden">
-      <div class="page-hdr">
-        <div class="page-title">Enrolled Patients</div>
-        <div class="page-sub">Manage and monitor your institution's patient cohort</div>
-      </div>
+      <!-- Patients Needing Attention (low adherence) -->
       <div class="s-card">
-        <div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-users"></i> All Enrolled Patients</div></div>
+        <div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-exclamation-triangle"></i> Patients Needing Attention</div></div>
         <div class="s-card-body">
-          <table class="admin-table" id="usersTable">
-            <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Gender</th><th>DOB</th><th>Joined</th><th>Admin</th><th>Actions</th></tr></thead>
+          <table class="admin-table" id="attentionTable">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Adherence</th>
+                <th>Last Missed</th>
+                <th>Action</th>
+              </tr>
+            </thead>
             <tbody></tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- MEDICATIONS SECTION -->
-    <div id="section-medications" class="hidden">
-      <div class="page-hdr">
-        <div class="page-title">All Medications</div>
-        <div class="page-sub">Active medications across all users</div>
-      </div>
-      <div class="s-card">
-        <div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-capsules"></i> Medications</div></div>
-        <div class="s-card-body">
-          <table class="admin-table" id="medsTable">
-            <thead><tr><th>ID</th><th>User</th><th>Name</th><th>Dosage</th><th>Frequency</th><th>Schedule</th><th>Start Date</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- DOSE HISTORY SECTION -->
-    <div id="section-history" class="hidden">
-      <div class="page-hdr">
-        <div class="page-title">Medication History</div>
-        <div class="page-sub">Last 200 dose logs</div>
-      </div>
-      <div class="s-card">
-        <div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-history"></i> Dose Logs</div></div>
-        <div class="s-card-body">
-          <table class="admin-table" id="historyTable">
-            <thead><tr><th>User</th><th>Medication</th><th>Status</th><th>Scheduled Time</th><th>Taken At</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- SUPPORT TICKETS SECTION -->
-    <div id="section-tickets" class="hidden">
-      <div class="page-hdr">
-        <div class="page-title">Support Tickets</div>
-        <div class="page-sub">Manage and reply to user tickets</div>
-      </div>
-      <div class="s-card">
-        <div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-ticket-alt"></i> Tickets</div></div>
-        <div class="s-card-body">
-          <table class="admin-table" id="ticketsTable">
-            <thead><tr><th>ID</th><th>User</th><th>Subject</th><th>Priority</th><th>Status</th><th>Created</th><th>Reply</th><th>Action</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- SYNC LOGS SECTION -->
-    <div id="section-sync" class="hidden">
-      <div class="page-hdr">
-        <div class="page-title">Sync History</div>
-        <div class="page-sub">Google Sheets sync logs</div>
-      </div>
-      <div class="s-card">
-        <div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-sync-alt"></i> Sync Records</div></div>
-        <div class="s-card-body">
-          <table class="admin-table" id="syncTable">
-            <thead><tr><th>ID</th><th>Type</th><th>Records</th><th>Status</th><th>Details</th><th>Time</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-
-    <!-- ADHERENCE REPORT SECTION -->
+    <!-- ================= ADHERENCE REPORT SECTION ================= -->
     <div id="section-adherence" class="hidden">
       <div class="page-hdr">
         <div class="page-title">Adherence Report</div>
@@ -317,34 +766,60 @@ body{
         </div>
         <div class="s-card-body">
           <table class="admin-table" id="adherenceTable">
-            <thead><tr><th>Patient</th><th>Email</th><th>Total Doses</th><th>Taken</th><th>Missed</th><th>Adherence %</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Email</th>
+                <th>Total Doses</th>
+                <th>Taken</th>
+                <th>Missed</th>
+                <th>Adherence %</th>
+              </tr>
+            </thead>
             <tbody></tbody>
           </table>
+          <div style="margin-top: 20px; padding: 12px; background: var(--g-pale); border-radius: var(--rs); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+            <div><strong>AVG ADHERENCE RATE</strong><br><span id="avgAdherence" style="font-size: 1.5rem; font-weight: 800; color: var(--g-main);">0%</span></div>
+            <div><strong>TOTAL MISSED DOSES</strong><br><span id="totalMissed" style="font-size: 1.5rem; font-weight: 800; color: #c62828;">0</span></div>
+          </div>
         </div>
       </div>
+    </div>
+
+    <!-- USERS SECTION -->
+    <div id="section-users" class="hidden">
+      <div class="page-hdr"><div class="page-title">Enrolled Patients</div><div class="page-sub">Manage and monitor your institution's patient cohort</div></div>
+      <div class="s-card"><div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-users"></i> All Enrolled Patients</div></div><div class="s-card-body"><table class="admin-table" id="usersTable"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Joined</th><th>Actions</th></tr></thead><tbody></tbody></table></div></div>
+    </div>
+
+    <!-- MEDICATIONS SECTION -->
+    <div id="section-medications" class="hidden">
+      <div class="page-hdr"><div class="page-title">All Medications</div><div class="page-sub">Active medications across all users</div></div>
+      <div class="s-card"><div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-capsules"></i> Medications</div></div><div class="s-card-body"><table class="admin-table" id="medsTable"><thead><tr><th>ID</th><th>User</th><th>Name</th><th>Dosage</th><th>Frequency</th><th>Schedule</th><th>Start Date</th></tr></thead><tbody></tbody></table></div></div>
+    </div>
+
+    <!-- HISTORY SECTION -->
+    <div id="section-history" class="hidden">
+      <div class="page-hdr"><div class="page-title">Medication History</div><div class="page-sub">Last 200 dose logs</div></div>
+      <div class="s-card"><div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-history"></i> Dose Logs</div></div><div class="s-card-body"><table class="admin-table" id="historyTable"><thead><tr><th>User</th><th>Medication</th><th>Status</th><th>Scheduled Time</th><th>Taken At</th></tr></thead><tbody></tbody></table></div></div>
+    </div>
+
+    <!-- TICKETS SECTION -->
+    <div id="section-tickets" class="hidden">
+      <div class="page-hdr"><div class="page-title">Support Tickets</div><div class="page-sub">Manage and reply to user tickets</div></div>
+      <div class="s-card"><div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-ticket-alt"></i> Tickets</div></div><div class="s-card-body"><table class="admin-table" id="ticketsTable"><thead><tr><th>ID</th><th>User</th><th>Subject</th><th>Priority</th><th>Status</th><th>Created</th><th>Reply</th><th>Action</th></tr></thead><tbody></tbody></table></div></div>
+    </div>
+
+    <!-- SYNC LOGS SECTION -->
+    <div id="section-sync" class="hidden">
+      <div class="page-hdr"><div class="page-title">Sync History</div><div class="page-sub">Google Sheets sync logs</div></div>
+      <div class="s-card"><div class="s-card-hdr"><div class="s-card-title"><i class="fas fa-sync-alt"></i> Sync Records</div></div><div class="s-card-body"><table class="admin-table" id="syncTable"><thead><tr><th>ID</th><th>Type</th><th>Records</th><th>Status</th><th>Details</th><th>Time</th></tr></thead><tbody></tbody></table></div></div>
     </div>
   </main>
 </div>
 
 <!-- Prescribe Medication Modal -->
-<div class="overlay" id="prescribeOverlay">
-  <div class="modal">
-    <div class="modal-hdr"><div class="modal-title"><i class="fas fa-prescription"></i> Prescribe Medication</div><button class="close-x" onclick="closePrescribeModal()"><i class="fas fa-times"></i></button></div>
-    <div class="modal-body">
-      <input type="hidden" id="prescribePatientId">
-      <div class="fg"><label class="flbl">Medication Name <span style="color:#c62828">*</span></label><input type="text" class="fi" id="prescribeName" required></div>
-      <div class="fg"><label class="flbl">Dosage</label><input type="text" class="fi" id="prescribeDosage"></div>
-      <div class="fg"><label class="flbl">Frequency</label><select class="fsel" id="prescribeFreq"><option>Once daily</option><option>Twice daily</option><option>Three times daily</option></select></div>
-      <div class="fg"><label class="flbl">Reminder Times (comma separated)</label><input type="text" class="fi" id="prescribeTimes" placeholder="08:00, 20:00"></div>
-      <div class="fg"><label class="flbl">Start Date</label><input type="date" class="fi" id="prescribeStart"></div>
-      <div class="fg"><label class="flbl">Notes</label><textarea class="fi" id="prescribeNotes"></textarea></div>
-    </div>
-    <div class="modal-ftr">
-      <button class="btn btn-secondary" onclick="closePrescribeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="savePrescription()">Prescribe</button>
-    </div>
-  </div>
-</div>
+<div class="overlay" id="prescribeOverlay"><div class="modal"><div class="modal-hdr"><div class="modal-title"><i class="fas fa-prescription"></i> Prescribe Medication</div><button class="close-x" onclick="closePrescribeModal()"><i class="fas fa-times"></i></button></div><div class="modal-body"><input type="hidden" id="prescribePatientId"><div class="fg"><label class="flbl">Medication Name <span style="color:#c62828">*</span></label><input type="text" class="fi" id="prescribeName" required></div><div class="fg"><label class="flbl">Dosage</label><input type="text" class="fi" id="prescribeDosage"></div><div class="fg"><label class="flbl">Frequency</label><select class="fsel" id="prescribeFreq"><option>Once daily</option><option>Twice daily</option><option>Three times daily</option></select></div><div class="fg"><label class="flbl">Reminder Times (comma separated)</label><input type="text" class="fi" id="prescribeTimes" placeholder="08:00, 20:00"></div><div class="fg"><label class="flbl">Start Date</label><input type="date" class="fi" id="prescribeStart"></div><div class="fg"><label class="flbl">Notes</label><textarea class="fi" id="prescribeNotes"></textarea></div></div><div class="modal-ftr"><button class="btn btn-secondary" onclick="closePrescribeModal()">Cancel</button><button class="btn btn-primary" onclick="savePrescription()">Prescribe</button></div></div></div>
 
 <script>
 let adminUser = null;
@@ -355,21 +830,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   adminUser = JSON.parse(stored);
   document.getElementById('adminName').textContent = adminUser.name || 'Admin';
   window.adminUserId = adminUser.id;
-
-  await loadDashboard();
-  await loadUsers();
-  await loadMedications();
-  await loadHistory();
-  await loadTickets();
-  await loadSyncLogs();
-  await loadAdherenceReport();
-
+  await refreshAllData();
   document.getElementById('triggerSyncBtn').addEventListener('click', triggerSync);
   document.getElementById('logoutBtn').addEventListener('click', logout);
   document.getElementById('sidebarLogoutBtn').addEventListener('click', logout);
   showSection('dashboard');
 });
 
+// Helper fetch with admin header
 async function apiFetch(url, options = {}) {
   options.headers = options.headers || {};
   options.headers['x-user-id'] = window.adminUserId;
@@ -378,7 +846,7 @@ async function apiFetch(url, options = {}) {
 }
 
 function showSection(section) {
-  ['dashboard','users','medications','history','tickets','sync','adherence'].forEach(s => {
+  ['dashboard', 'adherence', 'users', 'medications', 'history', 'tickets', 'sync'].forEach(s => {
     const el = document.getElementById(`section-${s}`);
     if (el) el.classList.toggle('hidden', s !== section);
   });
@@ -387,6 +855,7 @@ function showSection(section) {
   if (activeBtn) activeBtn.classList.add('active');
 }
 
+// Load all dashboard data
 async function loadDashboard() {
   try {
     const data = await apiFetch('/api/admin/stats');
@@ -396,12 +865,62 @@ async function loadDashboard() {
         <div class="stat-card"><div class="stat-ico ico-green"><i class="fas fa-users"></i></div><div><div class="stat-lbl">Enrolled Patients</div><div class="stat-val">${s.totalUsers}</div></div></div>
         <div class="stat-card"><div class="stat-ico ico-blue"><i class="fas fa-capsules"></i></div><div><div class="stat-lbl">Active Medications</div><div class="stat-val">${s.totalMeds}</div></div></div>
         <div class="stat-card"><div class="stat-ico ico-red"><i class="fas fa-ticket-alt"></i></div><div><div class="stat-lbl">Open Tickets</div><div class="stat-val">${s.openTickets}</div></div></div>
-        <div class="stat-card"><div class="stat-ico ico-green"><i class="fas fa-chart-line"></i></div><div><div class="stat-lbl">Adherence Rate</div><div class="stat-val">${s.adherenceRate||0}%</div></div></div>
       `;
+      document.getElementById('overallRate').innerText = (s.adherenceRate || 0) + '%';
     }
   } catch (err) { console.error(err); }
 }
 
+// Load adherence report & attention table
+async function loadAdherenceReport() {
+  try {
+    const data = await apiFetch('/api/admin/adherence-report');
+    if (data.success && data.report) {
+      const report = data.report;
+      // Adherence table
+      const tbody = document.querySelector('#adherenceTable tbody');
+      tbody.innerHTML = report.map(r => {
+        const pct = r.adherence_pct || 0;
+        const color = pct >= 80 ? '#2d5a27' : pct >= 60 ? '#e65100' : '#c62828';
+        return `<tr>
+          <td>${r.first_name} ${r.last_name}</td>
+          <td>${r.email}</td>
+          <td>${r.total_doses || 0}</td>
+          <td>${r.taken_doses || 0}</td>
+          <td>${r.missed_doses || 0}</td>
+          <td><strong style="color:${color}">${pct}%</strong></td>
+        </tr>`;
+      }).join('');
+      // Averages
+      const totalDoses = report.reduce((sum, r) => sum + (r.total_doses || 0), 0);
+      const takenDoses = report.reduce((sum, r) => sum + (r.taken_doses || 0), 0);
+      const avgRate = totalDoses ? Math.round((takenDoses / totalDoses) * 100) : 0;
+      const missedTotal = report.reduce((sum, r) => sum + (r.missed_doses || 0), 0);
+      document.getElementById('avgAdherence').innerText = avgRate + '%';
+      document.getElementById('totalMissed').innerText = missedTotal;
+      // Attention table: patients with adherence < 60% and last missed dose info
+      const attentionBody = document.querySelector('#attentionTable tbody');
+      const lowAdherence = report.filter(r => (r.adherence_pct || 0) < 60).slice(0, 10);
+      if (lowAdherence.length === 0) {
+        attentionBody.innerHTML = '<tr><td colspan="4">No patients with low adherence currently.</td></tr>';
+      } else {
+        attentionBody.innerHTML = lowAdherence.map(r => {
+          // find last missed date (simplified: from the report we don't have it; we can make a placeholder)
+          // For demo, we'll say "Today" or "Yesterday" based on random for visual
+          const lastMissed = 'Recently'; 
+          return `<tr>
+            <td>${r.first_name} ${r.last_name}</td>
+            <td><span style="color:#c62828; font-weight:bold;">${r.adherence_pct || 0}%</span></td>
+            <td>${lastMissed}</td>
+            <td><button class="btn btn-danger btn-sm" onclick="alert('Contact patient')">Contact</button></td>
+          </tr>`;
+        }).join('');
+      }
+    }
+  } catch(e){ console.error(e); }
+}
+
+// Other load functions (users, medications, history, tickets, sync logs)
 async function loadUsers() {
   try {
     const data = await apiFetch('/api/admin/users');
@@ -410,28 +929,15 @@ async function loadUsers() {
       tbody.innerHTML = data.users.map(u => `
         <tr>
           <td>${u.id}</td>
-          <td>${u.first_name} ${u.middle_name ? u.middle_name+' ' : ''}${u.last_name}</td>
+          <td>${u.first_name} ${u.middle_name || ''} ${u.last_name}</td>
           <td>${u.email}</td>
           <td>${u.phone}</td>
-          <td>${u.gender || '-'}</td>
-          <td>${u.date_of_birth || '-'}</td>
           <td>${new Date(u.created_at).toLocaleDateString()}</td>
-          <td>${u.is_admin ? 'Yes' : 'No'}</td>
-          <td>
-            <button class="btn btn-primary btn-sm" onclick="openPrescribeModal(${u.id})" title="Prescribe"><i class="fas fa-prescription"></i></button>
-            <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})"><i class="fas fa-trash"></i></button>
-          </td>
+          <td><button class="btn btn-primary btn-sm" onclick="openPrescribeModal(${u.id})"><i class="fas fa-prescription"></i></button> <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})"><i class="fas fa-trash"></i></button></td>
         </tr>
       `).join('');
     }
   } catch (err) { console.error(err); }
-}
-
-async function deleteUser(userId) {
-  if (!confirm('Delete this user and all data?')) return;
-  const res = await apiFetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
-  if (res.success) { alert('User deleted'); await loadUsers(); await loadDashboard(); }
-  else alert(res.message);
 }
 
 async function loadMedications() {
@@ -485,26 +991,13 @@ async function loadTickets() {
           <td>${t.priority}</td>
           <td><span class="badge ${t.status === 'open' ? 'badge-open' : 'badge-closed'}">${t.status}</span></td>
           <td>${new Date(t.created_at).toLocaleString()}</td>
-          <td><input type="text" id="reply-${t.id}" placeholder="Reply" style="width:140px; padding:4px;"></td>
+          <td><input type="text" id="reply-${t.id}" placeholder="Reply" style="width:120px; padding:4px;"></td>
           <td><button class="btn btn-primary btn-sm" onclick="replyToTicket(${t.id})">Send</button></td>
         </tr>
         ${t.reply ? `<tr><td colspan="8"><strong>Admin Reply:</strong> ${t.reply}</td></tr>` : ''}
       `).join('');
     }
   } catch (err) { console.error(err); }
-}
-
-async function replyToTicket(ticketId) {
-  const reply = document.getElementById(`reply-${ticketId}`).value;
-  if (!reply) return alert('Please enter a reply');
-  const status = confirm('Close ticket after reply?') ? 'closed' : 'open';
-  const res = await apiFetch(`/api/admin/tickets/${ticketId}/reply`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ reply, status })
-  });
-  if (res.success) { alert('Reply sent'); await loadTickets(); }
-  else alert(res.message);
 }
 
 async function loadSyncLogs() {
@@ -542,7 +1035,7 @@ function logout() {
   window.location.href = 'admin-login.html';
 }
 
-// ============ PRESCRIBE MEDICATION ============
+// Prescribe functions
 function openPrescribeModal(patientId) {
   document.getElementById('prescribePatientId').value = patientId;
   document.getElementById('prescribeOverlay').classList.add('open');
@@ -578,35 +1071,43 @@ async function savePrescription() {
   } else alert(res.message);
 }
 
-
-
-
-
-
-async function loadAdherenceReport() {
-  try {
-    const data = await apiFetch('/api/admin/adherence-report');
-    if (data.success) {
-      document.querySelector('#adherenceTable tbody').innerHTML = data.report.map(r => {
-        const pct = r.adherence_pct || 0;
-        const color = pct >= 80 ? '#2d5a27' : pct >= 60 ? '#e65100' : '#c62828';
-        return `<tr>
-          <td>${r.first_name} ${r.last_name}</td>
-          <td>${r.email}</td>
-          <td>${r.total_doses||0}</td>
-          <td>${r.taken_doses||0}</td>
-          <td>${r.missed_doses||0}</td>
-          <td><strong style="color:${color}">${pct}%</strong></td>
-        </tr>`;
-      }).join('');
-    }
-  } catch(e){console.error(e);}
+// Reply to ticket
+async function replyToTicket(ticketId) {
+  const reply = document.getElementById(`reply-${ticketId}`).value;
+  if (!reply) return alert('Please enter a reply');
+  const status = confirm('Close ticket after reply?') ? 'closed' : 'open';
+  const res = await apiFetch(`/api/admin/tickets/${ticketId}/reply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reply, status })
+  });
+  if (res.success) { alert('Reply sent'); await loadTickets(); }
+  else alert(res.message);
 }
 
+// Delete user
+async function deleteUser(userId) {
+  if (!confirm('Delete this user and all data?')) return;
+  const res = await apiFetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+  if (res.success) { alert('User deleted'); await refreshAllData(); }
+  else alert(res.message);
+}
+
+// Export CSV for adherence report
 function exportAdherenceCSV() {
   const rows = [['Patient','Email','Total Doses','Taken','Missed','Adherence %']];
   document.querySelectorAll('#adherenceTable tbody tr').forEach(tr => {
-    rows.push([...tr.querySelectorAll('td')].map(td => td.textContent.trim()));
+    const cells = tr.querySelectorAll('td');
+    if (cells.length >= 6) {
+      rows.push([
+        cells[0].innerText,
+        cells[1].innerText,
+        cells[2].innerText,
+        cells[3].innerText,
+        cells[4].innerText,
+        cells[5].innerText
+      ]);
+    }
   });
   const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
   const a = document.createElement('a');
@@ -615,6 +1116,18 @@ function exportAdherenceCSV() {
   a.click();
 }
 
+// Refresh all data
+async function refreshAllData() {
+  await loadDashboard();
+  await loadAdherenceReport();
+  await loadUsers();
+  await loadMedications();
+  await loadHistory();
+  await loadTickets();
+  await loadSyncLogs();
+}
+
+// Expose global functions
 window.deleteUser = deleteUser;
 window.replyToTicket = replyToTicket;
 window.showSection = showSection;
